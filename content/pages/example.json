@@ -1,0 +1,54 @@
+{
+  "title": "Example",
+  "description": "An example page built with the visual page builder.",
+  "pubDate": "2026-05-04",
+  "draft": true,
+  "showInNav": false,
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Welcome to your page builder",
+      "align": "center"
+    },
+    {
+      "type": "paragraph",
+      "text": "This page was built block-by-block in the admin tool. You can **edit it** at `/admin` after running `npm run admin`. Set `draft` to `false` to publish.",
+      "align": "center"
+    },
+    {
+      "type": "spacer",
+      "size": "md"
+    },
+    {
+      "type": "cards",
+      "items": [
+        {
+          "title": "Headings & text",
+          "description": "Drop in headings and paragraphs with simple alignment.",
+          "icon": "📝"
+        },
+        {
+          "title": "Images & buttons",
+          "description": "Pick from the media library, link out anywhere.",
+          "icon": "🖼"
+        },
+        {
+          "title": "Cards & columns",
+          "description": "Build feature grids and side-by-side layouts.",
+          "icon": "⫼"
+        }
+      ]
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "button",
+      "text": "Go home",
+      "href": "/",
+      "style": "primary",
+      "align": "center"
+    }
+  ]
+}

@@ -1,11 +1,15 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import { getCollection } from 'astro:content';
+import { NAV, SITE } from '../config';
 
-const navLinks = [
-  { href: '/blog', label: 'Blog' },
-  { href: '/projects', label: 'Projects' },
-  { href: '/about', label: 'About' },
-];
+const customPages = await getCollection('pages', ({ data }) => !data.draft && data.showInNav);
+const customLinks = customPages.map((p) => ({
+  href: `/${p.slug}`,
+  label: p.data.navLabel || p.data.title,
+}));
+
+const navLinks = [...NAV.links, ...customLinks];
 
 const { pathname } = Astro.url;
 ---
@@ -13,7 +17,7 @@ const { pathname } = Astro.url;
 <header class="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm">
   <div class="container flex items-center justify-between h-14">
     <a href="/" class="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-accent-500 dark:hover:text-accent-400 transition-colors">
-      iruki.dev
+      {SITE.title}
     </a>
     <nav class="flex items-center gap-1">
       {navLinks.map(({ href, label }) => (
@@ -21,7 +25,7 @@ const { pathname } = Astro.url;
           href={href}
           class:list={[
             'px-3 py-1.5 rounded-md text-sm transition-colors',
-            pathname.startsWith(href)
+            (href === '/' ? pathname === '/' : pathname.startsWith(href))
               ? 'text-accent-500 dark:text-accent-400 font-medium'
               : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
           ]}

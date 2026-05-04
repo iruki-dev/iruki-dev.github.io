@@ -1,8 +1,15 @@
-export const SITE = {
-  title: 'iruki.dev',
-  description: 'Personal website of iruki.dev — blog, projects, and more.',
-  url: 'https://iruki.dev',
-  author: 'iruki',
-  github: 'https://github.com/iruki-dev',
-  email: 'me@iruki.dev',
-} as const;
+import siteJson from './site.json';
+import navJson from './nav.json';
+
+export const SITE = siteJson as {
+  title: string;
+  description: string;
+  url: string;
+  author: string;
+  github: string;
+  email: string;
+};
+
+export const NAV = navJson as {
+  links: { href: string; label: string }[];
+};

@@ -1,0 +1,145 @@
+---
+interface Props {
+  block: any;
+}
+
+const { block } = Astro.props;
+
+const alignClass = (a?: string) =>
+  a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left';
+
+const widthClass = (w?: string) =>
+  w === 'sm' ? 'max-w-sm' : w === 'md' ? 'max-w-md' : w === 'lg' ? 'max-w-2xl' : 'w-full';
+
+const spacerClass = (s?: string) =>
+  s === 'sm' ? 'h-4' : s === 'lg' ? 'h-16' : s === 'xl' ? 'h-24' : 'h-8';
+
+const buttonClass = (s?: string) =>
+  s === 'outline'
+    ? 'border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
+    : s === 'ghost'
+    ? 'text-accent-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-accent-400'
+    : 'bg-accent-500 hover:bg-accent-600 text-white';
+
+const escHtml = (s: string) =>
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Tiny inline markdown: **bold**, *italic*, `code`, [text](url), <br>
+function renderInline(txt: string) {
+  if (!txt) return '';
+  let out = escHtml(txt);
+  out = out.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-sm">$1</code>');
+  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-accent-500 dark:text-accent-400 hover:underline">$1</a>');
+  out = out.replace(/\n/g, '<br />');
+  return out;
+}
+
+// Tiny block markdown for columns: paragraphs separated by blank lines, plus inline.
+function renderBlockMd(txt: string) {
+  if (!txt) return '';
+  return txt
+    .split(/\n{2,}/)
+    .map((p) => `<p>${renderInline(p.trim())}</p>`)
+    .join('');
+}
+---
+
+{block.type === 'heading' && (
+  <div class={`mb-6 ${alignClass(block.align)}`}>
+    {block.level === 1 && (
+      <h1 class="text-3xl sm:text-4xl font-semibold text-zinc-900 dark:text-zinc-100" set:html={renderInline(block.text)} />
+    )}
+    {block.level === 2 && (
+      <h2 class="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-100" set:html={renderInline(block.text)} />
+    )}
+    {(!block.level || block.level === 3) && (
+      <h3 class="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-zinc-100" set:html={renderInline(block.text)} />
+    )}
+  </div>
+)}
+
+{block.type === 'paragraph' && (
+  <div
+    class={`mb-6 text-zinc-700 dark:text-zinc-300 leading-relaxed ${alignClass(block.align)}`}
+    set:html={renderBlockMd(block.text)}
+  />
+)}
+
+{block.type === 'image' && block.src && (
+  <figure class="mb-6 flex flex-col items-center">
+    <img src={block.src} alt={block.alt || ''} class={`rounded-lg ${widthClass(block.width)}`} />
+    {block.caption && (
+      <figcaption class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{block.caption}</figcaption>
+    )}
+  </figure>
+)}
+
+{block.type === 'button' && (
+  <div class={`mb-6 ${alignClass(block.align)}`}>
+    <a
+      href={block.href || '#'}
+      target={block.newTab ? '_blank' : undefined}
+      rel={block.newTab ? 'noopener noreferrer' : undefined}
+      class={`inline-block px-5 py-2.5 rounded-md font-medium text-sm transition-colors ${buttonClass(block.style)}`}
+    >
+      {block.text || 'Click me'}
+    </a>
+  </div>
+)}
+
+{block.type === 'columns' && (
+  <div class:list={[
+    'mb-6 grid gap-6',
+    (block.columns?.length === 3) ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
+  ]}>
+    {block.columns?.map((col: any) => (
+      <div
+        class="text-zinc-700 dark:text-zinc-300 leading-relaxed space-y-3"
+        set:html={renderBlockMd(col.markdown)}
+      />
+    ))}
+  </div>
+)}
+
+{block.type === 'divider' && (
+  <hr class="my-8 border-zinc-200 dark:border-zinc-800" />
+)}
+
+{block.type === 'spacer' && <div class={spacerClass(block.size)} />}
+
+{block.type === 'code' && (
+  <pre class="mb-6 p-4 rounded-lg bg-zinc-100 dark:bg-zinc-900 overflow-x-auto text-sm"><code>{block.code}</code></pre>
+)}
+
+{block.type === 'html' && (
+  <div class="mb-6" set:html={block.html} />
+)}
+
+{block.type === 'cards' && block.items?.length > 0 && (
+  <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {block.items.map((item: any) => (
+      item.href ? (
+        <a
+          href={item.href}
+          class="block p-5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-accent-500 dark:hover:border-accent-400 transition-colors"
+        >
+          {item.icon && <div class="text-2xl mb-2">{item.icon}</div>}
+          <div class="font-semibold text-zinc-900 dark:text-zinc-100">{item.title}</div>
+          {item.description && (
+            <div class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{item.description}</div>
+          )}
+        </a>
+      ) : (
+        <div class="block p-5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+          {item.icon && <div class="text-2xl mb-2">{item.icon}</div>}
+          <div class="font-semibold text-zinc-900 dark:text-zinc-100">{item.title}</div>
+          {item.description && (
+            <div class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{item.description}</div>
+          )}
+        </div>
+      )
+    ))}
+  </div>
+)}
