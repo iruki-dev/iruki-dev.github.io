@@ -1,0 +1,38 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+
+const navLinks = [
+  { href: '/blog', label: 'Blog' },
+  { href: '/projects', label: 'Projects' },
+  { href: '/about', label: 'About' },
+];
+
+const { pathname } = Astro.url;
+---
+
+<header class="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm">
+  <div class="container flex items-center justify-between h-14">
+    <a href="/" class="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-accent-500 dark:hover:text-accent-400 transition-colors">
+      iruki.dev
+    </a>
+
+    <nav class="flex items-center gap-1">
+      {navLinks.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[
+            'px-3 py-1.5 rounded-md text-sm transition-colors',
+            pathname.startsWith(href)
+              ? 'text-accent-500 dark:text-accent-400 font-medium'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+          ]}
+        >
+          {label}
+        </a>
+      ))}
+      <div class="ml-1 border-l border-zinc-200 dark:border-zinc-800 pl-2">
+        <ThemeToggle />
+      </div>
+    </nav>
+  </div>
+</header>
