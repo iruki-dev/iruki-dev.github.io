@@ -11,12 +11,8 @@ interface Props {
 
 const { title, description, pubDate, updatedDate, tags = [] } = Astro.props;
 
-const pubDateStr = pubDate.toLocaleDateString('en-US', {
-  year: 'numeric', month: 'long', day: 'numeric',
-});
-const updatedDateStr = updatedDate?.toLocaleDateString('en-US', {
-  year: 'numeric', month: 'long', day: 'numeric',
-});
+const pubDateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const updatedDateStr = updatedDate?.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <BaseLayout title={title} description={description}>
@@ -34,7 +30,6 @@ const updatedDateStr = updatedDate?.toLocaleDateString('en-US', {
         )}
       </div>
     </header>
-
     <div class="prose dark:prose-invert max-w-none
                 prose-headings:font-semibold
                 prose-a:text-accent-500 prose-a:no-underline hover:prose-a:underline
@@ -46,7 +41,6 @@ const updatedDateStr = updatedDate?.toLocaleDateString('en-US', {
       <slot />
     </div>
   </article>
-
   <div class="mt-12 pt-6 border-t border-zinc-100 dark:border-zinc-800">
     <a href="/blog" class="text-sm text-accent-500 dark:text-accent-400 hover:underline">← All posts</a>
   </div>

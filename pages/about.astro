@@ -1,24 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
 ---
 
-<BaseLayout title="About" description="About iruki.dev">
+<BaseLayout title="About" description={`About ${SITE.title}`}>
   <div class="prose dark:prose-invert max-w-none
               prose-headings:font-semibold
               prose-a:text-accent-500 prose-a:no-underline hover:prose-a:underline
               dark:prose-a:text-accent-400">
     <h1>About</h1>
-    <p>
-      Hi, I'm iruki. Developer and builder of things.
-    </p>
+    <p>Hi, I'm iruki. Developer and builder of things.</p>
     <p>
       This site is my personal space on the internet. I write about things I'm learning,
       projects I'm working on, and whatever else I find interesting.
     </p>
     <h2>Contact</h2>
     <ul>
-      <li>Email: <a href="mailto:me@iruki.dev">me@iruki.dev</a></li>
-      <li>GitHub: <a href="https://github.com/iruki-dev" target="_blank" rel="noopener noreferrer">iruki-dev</a></li>
+      <li>Email: <a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+      <li>GitHub: <a href={SITE.github} target="_blank" rel="noopener noreferrer">{SITE.author}</a></li>
     </ul>
   </div>
 </BaseLayout>

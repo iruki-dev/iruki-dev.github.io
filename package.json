@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "admin": "node tools/admin.mjs"
   },
   "dependencies": {
     "astro": "^4.16.18",

@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
+import { SITE } from '../config';
 
 interface Props {
   title: string;
@@ -11,12 +12,12 @@ interface Props {
 
 const {
   title,
-  description = 'Personal website of iruki.dev — blog, projects, and more.',
+  description = SITE.description,
   ogImage = '/og.png',
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const siteTitle = title === 'iruki.dev' ? title : `${title} — iruki.dev`;
+const siteTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
 ---
 
 <!doctype html>
