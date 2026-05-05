@@ -5,29 +5,69 @@
 @layer base {
   :root {
     color-scheme: light;
+    /* Default accent palette: indigo */
+    --accent-50:  238 242 255;
+    --accent-100: 224 231 255;
+    --accent-200: 199 210 254;
+    --accent-300: 165 180 252;
+    --accent-400: 129 140 248;
+    --accent-500: 99 102 241;
+    --accent-600: 79 70 229;
+    --accent-700: 67 56 202;
+    --accent-800: 55 48 163;
+    --accent-900: 49 46 129;
   }
-  .dark {
-    color-scheme: dark;
+  .dark { color-scheme: dark; }
+
+  /* Palette presets — apply by setting [data-palette="..."] on <html> */
+  [data-palette="rose"] {
+    --accent-50: 255 241 242; --accent-100: 255 228 230; --accent-200: 254 205 211;
+    --accent-300: 253 164 175; --accent-400: 251 113 133; --accent-500: 244 63 94;
+    --accent-600: 225 29 72;  --accent-700: 190 18 60;   --accent-800: 159 18 57; --accent-900: 136 19 55;
+  }
+  [data-palette="emerald"] {
+    --accent-50: 236 253 245; --accent-100: 209 250 229; --accent-200: 167 243 208;
+    --accent-300: 110 231 183; --accent-400: 52 211 153;  --accent-500: 16 185 129;
+    --accent-600: 5 150 105;   --accent-700: 4 120 87;    --accent-800: 6 95 70;   --accent-900: 6 78 59;
+  }
+  [data-palette="amber"] {
+    --accent-50: 255 251 235; --accent-100: 254 243 199; --accent-200: 253 230 138;
+    --accent-300: 252 211 77;  --accent-400: 251 191 36;  --accent-500: 245 158 11;
+    --accent-600: 217 119 6;   --accent-700: 180 83 9;    --accent-800: 146 64 14;  --accent-900: 120 53 15;
+  }
+  [data-palette="sky"] {
+    --accent-50: 240 249 255; --accent-100: 224 242 254; --accent-200: 186 230 253;
+    --accent-300: 125 211 252; --accent-400: 56 189 248;  --accent-500: 14 165 233;
+    --accent-600: 2 132 199;   --accent-700: 3 105 161;   --accent-800: 7 89 133;   --accent-900: 12 74 110;
+  }
+  [data-palette="violet"] {
+    --accent-50: 245 243 255; --accent-100: 237 233 254; --accent-200: 221 214 254;
+    --accent-300: 196 181 253; --accent-400: 167 139 250; --accent-500: 139 92 246;
+    --accent-600: 124 58 237;  --accent-700: 109 40 217;  --accent-800: 91 33 182;  --accent-900: 76 29 149;
+  }
+  [data-palette="crimson"] {
+    --accent-50: 254 242 242; --accent-100: 254 226 226; --accent-200: 254 202 202;
+    --accent-300: 252 165 165; --accent-400: 248 113 113; --accent-500: 239 68 68;
+    --accent-600: 220 38 38;   --accent-700: 185 28 28;   --accent-800: 153 27 27;  --accent-900: 127 29 29;
+  }
+  [data-palette="lime"] {
+    --accent-50: 247 254 231; --accent-100: 236 252 203; --accent-200: 217 249 157;
+    --accent-300: 190 242 100; --accent-400: 163 230 53;  --accent-500: 132 204 22;
+    --accent-600: 101 163 13;  --accent-700: 77 124 15;   --accent-800: 63 98 18;   --accent-900: 54 83 20;
   }
 
-  html {
-    @apply scroll-smooth;
-  }
+  html { @apply scroll-smooth; }
 
   body {
     @apply bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100;
     @apply transition-colors duration-200;
   }
 
-  ::selection {
-    @apply bg-accent-200 dark:bg-accent-800;
-  }
+  ::selection { @apply bg-accent-200 dark:bg-accent-800; }
 }
 
 @layer components {
-  .container {
-    @apply mx-auto max-w-3xl px-4;
-  }
+  .container { @apply mx-auto max-w-3xl px-4; }
 
   .link {
     @apply text-accent-500 hover:text-accent-600 dark:text-accent-400 dark:hover:text-accent-300 underline-offset-4 hover:underline transition-colors;
@@ -39,3 +79,33 @@
            dark:bg-zinc-800 dark:text-zinc-400;
   }
 }
+
+/* Reading progress bar */
+.reading-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0;
+  background: rgb(var(--accent-500));
+  z-index: 60; transition: width 80ms linear;
+}
+
+/* Back-to-top button */
+.back-to-top {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  width: 2.5rem; height: 2.5rem; border-radius: 9999px;
+  background: rgb(var(--accent-500)); color: white;
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / .35);
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 200ms, transform 200ms;
+}
+.back-to-top.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.back-to-top:hover { background: rgb(var(--accent-600)); }
+
+/* Block: marquee */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track { animation: marquee-scroll var(--marquee-duration, 20s) linear infinite; }
+.marquee-track.reverse { animation-direction: reverse; }
+.marquee-host:hover .marquee-track { animation-play-state: paused; }

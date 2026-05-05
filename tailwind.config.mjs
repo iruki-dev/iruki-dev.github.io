@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const accent = (n) => `rgb(var(--accent-${n}) / <alpha-value>)`;
+
 export default {
   content: [
     './components/**/*.{astro,ts}',
@@ -11,9 +13,9 @@ export default {
     extend: {
       colors: {
         accent: {
-          50:  '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe',
-          300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1',
-          600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
+          50: accent(50), 100: accent(100), 200: accent(200),
+          300: accent(300), 400: accent(400), 500: accent(500),
+          600: accent(600), 700: accent(700), 800: accent(800), 900: accent(900),
         },
       },
       typography: ({ theme }) => ({

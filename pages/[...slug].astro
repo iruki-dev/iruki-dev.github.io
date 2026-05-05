@@ -4,11 +4,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageBlock from '../components/blocks/PageBlock.astro';
 
 export async function getStaticPaths() {
+  const slugOf = (p: any) => p.slug ?? p.id.replace(/\.json$/, '');
   const pages = await getCollection('pages', ({ data }) => !data.draft);
-  return pages.map((p) => ({
-    params: { slug: p.slug },
-    props: p,
-  }));
+  // 'home' is rendered at / by pages/index.astro — skip it here.
+  return pages
+    .filter((p) => slugOf(p) !== 'home')
+    .map((p) => ({
+      params: { slug: slugOf(p) },
+      props: p,
+    }));
 }
 
 const page = Astro.props;

@@ -1,0 +1,19 @@
+---
+const { block } = Astro.props as { block: any };
+const html = block.html || '';
+const css  = block.css  || '';
+const js   = block.js   || '';
+const height = Math.max(100, Math.min(2000, Number(block.height) || 300));
+
+const doc = `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${html}<script>try{${js}}catch(e){document.body.insertAdjacentHTML('beforeend','<pre style=color:red>'+e+'</pre>')}<\/script></body></html>`;
+const srcDoc = doc;
+---
+<div class="mb-6 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white">
+  <iframe
+    title="Sandboxed HTML/CSS/JS preview"
+    sandbox="allow-scripts"
+    srcdoc={srcDoc}
+    class="w-full bg-white"
+    style={`height:${height}px;border:0`}
+  />
+</div>

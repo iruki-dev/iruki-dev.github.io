@@ -1,0 +1,35 @@
+---
+import { resolveEmbedUrl } from './_md';
+const { block } = Astro.props as { block: any };
+
+const isFile = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(block.src || '');
+const embed = !isFile ? resolveEmbedUrl(block.src) : '';
+---
+<figure class="mb-6">
+  {isFile ? (
+    <video
+      class="w-full rounded-lg bg-black"
+      src={block.src}
+      poster={block.poster || undefined}
+      controls={block.controls !== false}
+      autoplay={block.autoplay || undefined}
+      loop={block.loop || undefined}
+      muted={block.muted || block.autoplay || undefined}
+      playsinline
+    />
+  ) : block.src ? (
+    <div class="relative w-full overflow-hidden rounded-lg" style="aspect-ratio:16/9">
+      <iframe
+        class="absolute inset-0 w-full h-full"
+        src={embed}
+        title={block.caption || 'Embedded video'}
+        loading="lazy"
+        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      />
+    </div>
+  ) : (
+    <div class="rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 text-sm py-8 text-center">No video source</div>
+  )}
+  {block.caption && <figcaption class="mt-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">{block.caption}</figcaption>}
+</figure>

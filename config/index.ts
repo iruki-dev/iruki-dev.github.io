@@ -1,5 +1,9 @@
 import siteJson from './site.json';
-import navJson from './nav.json';
+
+export const PALETTES = [
+  'indigo', 'rose', 'emerald', 'amber', 'sky', 'violet', 'crimson', 'lime',
+] as const;
+export type Palette = typeof PALETTES[number];
 
 export const SITE = siteJson as {
   title: string;
@@ -8,8 +12,12 @@ export const SITE = siteJson as {
   author: string;
   github: string;
   email: string;
-};
-
-export const NAV = navJson as {
-  links: { href: string; label: string }[];
+  theme?: {
+    palette?: Palette;
+  };
+  features?: {
+    readingProgress?: boolean;
+    backToTop?: boolean;
+    konami?: boolean;
+  };
 };

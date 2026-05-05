@@ -1,70 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from '../components/PostCard.astro';
-import ProjectCard from '../components/ProjectCard.astro';
+import PageBlock from '../components/blocks/PageBlock.astro';
 import { getCollection } from 'astro:content';
 
-const posts = (await getCollection('blog', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-  .slice(0, 3);
+const HOME_SLUG = 'home';
+const slugOf = (p: any) => p.slug ?? p.id.replace(/\.json$/, '');
 
-const projects = (await getCollection('projects', ({ data }) => !data.draft && data.featured))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-  .slice(0, 3);
+const home = (await getCollection('pages', ({ data }) => !data.draft))
+  .find((p) => slugOf(p) === HOME_SLUG);
 ---
 
-<BaseLayout title="iruki.dev">
-  <section class="mb-14">
-    <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-      Hey, I'm iruki
-    </h1>
-    <p class="mt-3 text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xl">
-      Developer. This is my personal corner of the internet — blog, projects, and whatever else I feel like putting here.
-    </p>
-  </section>
-
-  {posts.length > 0 && (
-    <section class="mb-14">
-      <div class="flex items-baseline justify-between mb-1">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-          Recent posts
-        </h2>
-        <a href="/blog" class="text-sm link">All posts →</a>
-      </div>
-      <div>
-        {posts.map(post => (
-          <PostCard
-            title={post.data.title}
-            description={post.data.description}
-            pubDate={post.data.pubDate}
-            slug={post.slug}
-            tags={post.data.tags}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-
-  {projects.length > 0 && (
-    <section>
-      <div class="flex items-baseline justify-between mb-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-          Featured projects
-        </h2>
-        <a href="/projects" class="text-sm link">All projects →</a>
-      </div>
-      <div class="grid gap-3 sm:grid-cols-2">
-        {projects.map(project => (
-          <ProjectCard
-            title={project.data.title}
-            description={project.data.description}
-            slug={project.slug}
-            tags={project.data.tags}
-            github={project.data.github}
-            demo={project.data.demo}
-          />
-        ))}
-      </div>
-    </section>
+<BaseLayout title={home?.data.title ?? 'iruki.dev'} description={home?.data.description}>
+  {home ? (
+    home.data.blocks.map((block) => <PageBlock block={block} />)
+  ) : (
+    <div class="prose dark:prose-invert max-w-none">
+      <h1>iruki.dev</h1>
+      <p>
+        No <code>home</code> page yet. Create one in the admin tool (<code>npm run admin</code>) —
+        or add <code>content/pages/home.json</code> with a <code>blocks</code> array.
+      </p>
+    </div>
   )}
 </BaseLayout>

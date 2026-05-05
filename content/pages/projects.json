@@ -1,0 +1,19 @@
+{
+  "title": "Projects",
+  "description": "Things I've built.",
+  "pubDate": "2026-05-04",
+  "draft": false,
+  "showInNav": true,
+  "navLabel": "Projects",
+  "navOrder": 2,
+  "blocks": [
+    { "type": "heading", "level": 1, "text": "Projects" },
+    {
+      "type": "featured-projects",
+      "title": "All projects",
+      "limit": 0,
+      "featuredOnly": false,
+      "showAllLink": false
+    }
+  ]
+}

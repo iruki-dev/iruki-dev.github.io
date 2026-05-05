@@ -1,0 +1,29 @@
+---
+const { block } = Astro.props as { block: any };
+const value = Math.max(0, Math.min(100, Number(block.value) || 0));
+---
+<div class="mb-6">
+  {(block.label || block.showValue) && (
+    <div class="flex items-center justify-between text-sm text-zinc-700 dark:text-zinc-300 mb-1.5">
+      <span>{block.label}</span>
+      {block.showValue !== false && <span class="tabular-nums text-zinc-500 dark:text-zinc-400">{value}%</span>}
+    </div>
+  )}
+  <div class="h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+    <div
+      class:list={['h-full bg-accent-500 transition-[width] duration-700 ease-out', block.striped && 'progress-striped']}
+      style={`width: ${value}%`}
+    />
+  </div>
+</div>
+<style is:global>
+  .progress-striped {
+    background-image: linear-gradient(45deg,
+      rgba(255,255,255,.18) 25%, transparent 25%,
+      transparent 50%, rgba(255,255,255,.18) 50%,
+      rgba(255,255,255,.18) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    animation: progress-stripes 1s linear infinite;
+  }
+  @keyframes progress-stripes { from { background-position: 0 0; } to { background-position: 1rem 0; } }
+</style>

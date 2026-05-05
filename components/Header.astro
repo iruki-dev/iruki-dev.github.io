@@ -1,15 +1,23 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
 import { getCollection } from 'astro:content';
-import { NAV, SITE } from '../config';
+import { SITE } from '../config';
 
-const customPages = await getCollection('pages', ({ data }) => !data.draft && data.showInNav);
-const customLinks = customPages.map((p) => ({
-  href: `/${p.slug}`,
-  label: p.data.navLabel || p.data.title,
-}));
+const HOME_SLUG = 'home';
+const slugOf = (p: any) => p.slug ?? p.id.replace(/\.json$/, '');
 
-const navLinks = [...NAV.links, ...customLinks];
+const navPages = await getCollection('pages', ({ data }) => !data.draft && data.showInNav);
+
+const navLinks = navPages
+  .map((p) => {
+    const s = slugOf(p);
+    return {
+      href: s === HOME_SLUG ? '/' : `/${s}`,
+      label: p.data.navLabel || p.data.title,
+      order: p.data.navOrder ?? 0,
+    };
+  })
+  .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
 
 const { pathname } = Astro.url;
 ---

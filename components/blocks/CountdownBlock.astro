@@ -1,0 +1,55 @@
+---
+const { block } = Astro.props as { block: any };
+const target = block.target || '';
+const finishedText = block.finishedText || 'Time’s up!';
+---
+<div class="mb-6 rounded-lg border border-zinc-200 dark:border-zinc-800 p-5 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900/60 dark:to-zinc-950 text-center countdown-host" data-target={target} data-finished={finishedText}>
+  {block.label && <div class="text-sm uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">{block.label}</div>}
+  <div class="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto countdown-numbers">
+    {['days','hours','minutes','seconds'].map((u) => (
+      <div>
+        <div class="text-3xl sm:text-4xl font-bold tabular-nums text-accent-600 dark:text-accent-400" data-cd={u}>—</div>
+        <div class="text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mt-1">{u}</div>
+      </div>
+    ))}
+  </div>
+  <div class="countdown-finished mt-3 text-zinc-700 dark:text-zinc-300 hidden">{finishedText}</div>
+</div>
+
+<script is:inline>
+  (function(){
+    function pad(n){ return String(n).padStart(2,'0'); }
+    document.querySelectorAll('.countdown-host').forEach((host) => {
+      const target = new Date(host.dataset.target).getTime();
+      if (!Number.isFinite(target)) return;
+      const els = {
+        days:    host.querySelector('[data-cd="days"]'),
+        hours:   host.querySelector('[data-cd="hours"]'),
+        minutes: host.querySelector('[data-cd="minutes"]'),
+        seconds: host.querySelector('[data-cd="seconds"]'),
+      };
+      const fin = host.querySelector('.countdown-finished');
+      const nums = host.querySelector('.countdown-numbers');
+      function tick(){
+        const diff = target - Date.now();
+        if (diff <= 0) {
+          if (nums) nums.style.display = 'none';
+          if (fin) fin.classList.remove('hidden');
+          return false;
+        }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        els.days.textContent = String(d);
+        els.hours.textContent = pad(h);
+        els.minutes.textContent = pad(m);
+        els.seconds.textContent = pad(s);
+        return true;
+      }
+      if (tick()) {
+        const id = setInterval(() => { if (!tick()) clearInterval(id); }, 1000);
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,24 @@
+---
+const { block } = Astro.props as { block: any };
+const code = block.code || '';
+---
+<figure class="mb-6">
+  <pre class="mermaid rounded-lg p-4 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 overflow-auto">{code}</pre>
+  {block.caption && <figcaption class="mt-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">{block.caption}</figcaption>}
+</figure>
+
+<script is:inline>
+  (function(){
+    if (window.__mermaidLoaded) return;
+    window.__mermaidLoaded = true;
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.textContent = `
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      const isDark = document.documentElement.classList.contains('dark');
+      mermaid.initialize({ startOnLoad: true, theme: isDark ? 'dark' : 'default', securityLevel: 'loose' });
+      mermaid.run({ querySelector: 'pre.mermaid' });
+    `;
+    document.head.appendChild(s);
+  })();
+</script>

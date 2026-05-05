@@ -1,0 +1,20 @@
+---
+import { renderInline } from './_md';
+const { block } = Astro.props as { block: any };
+---
+<figure class="mb-6 pl-4 border-l-4 border-accent-400 dark:border-accent-500">
+  <blockquote class="text-lg italic text-zinc-800 dark:text-zinc-200 leading-relaxed">
+    <span set:html={renderInline(block.text)} />
+  </blockquote>
+  {(block.author || block.source) && (
+    <figcaption class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+      {block.author && <span>— {block.author}</span>}
+      {block.author && block.source && <span>, </span>}
+      {block.source && (
+        block.sourceHref
+          ? <a href={block.sourceHref} class="link">{block.source}</a>
+          : <cite>{block.source}</cite>
+      )}
+    </figcaption>
+  )}
+</figure>

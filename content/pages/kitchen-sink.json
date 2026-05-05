@@ -1,0 +1,96 @@
+{
+  "title": "Kitchen sink",
+  "description": "A showcase of every block type the page builder can render.",
+  "pubDate": "2026-05-04",
+  "draft": false,
+  "showInNav": false,
+  "blocks": [
+    { "type": "heading", "level": 1, "text": "Kitchen sink", "align": "center" },
+    { "type": "paragraph", "text": "Every block type, on one page. Use this as a reference when building your own pages — copy a block in the admin tool, tweak the content, and you're off.", "align": "center" },
+
+    { "type": "heading", "level": 2, "text": "Callouts" },
+    { "type": "callout", "variant": "info", "title": "FYI", "text": "Callouts are great for **breaking up long text** with information you don't want readers to miss." },
+    { "type": "callout", "variant": "tip", "title": "Tip", "text": "Wrap callouts around code snippets, hotkeys, or anything actionable." },
+    { "type": "callout", "variant": "warning", "title": "Heads up", "text": "Warnings stand out without being alarming." },
+    { "type": "callout", "variant": "danger", "title": "Don't do this", "text": "Use sparingly — for things that will *actually* break." },
+    { "type": "callout", "variant": "success", "title": "Great", "text": "Confirm a positive outcome." },
+
+    { "type": "heading", "level": 2, "text": "Quote" },
+    { "type": "quote", "text": "Any sufficiently advanced technology is indistinguishable from magic.", "author": "Arthur C. Clarke", "source": "Profiles of the Future" },
+
+    { "type": "heading", "level": 2, "text": "Stats" },
+    { "type": "stats", "items": [
+      { "value": "1,200", "label": "Stars",   "suffix": "+", "animate": true },
+      { "value": "42",    "label": "Repos",   "animate": true },
+      { "value": "99.9",  "label": "Uptime",  "suffix": "%", "animate": true },
+      { "value": "365",   "label": "Days/yr", "animate": true }
+    ]},
+
+    { "type": "heading", "level": 2, "text": "Progress" },
+    { "type": "progress", "label": "Frontend",  "value": 85, "showValue": true, "striped": false },
+    { "type": "progress", "label": "Backend",   "value": 70, "showValue": true, "striped": true },
+    { "type": "progress", "label": "DevOps",    "value": 55, "showValue": true, "striped": false },
+
+    { "type": "heading", "level": 2, "text": "Timeline" },
+    { "type": "timeline", "items": [
+      { "date": "2024", "title": "Domain registered", "text": "iruki.dev was born — and immediately neglected." },
+      { "date": "2026", "title": "Site rebuilt",       "text": "Astro + visual page builder + 20+ block types." },
+      { "date": "Future", "title": "Actually post things", "text": "We'll see." }
+    ]},
+
+    { "type": "heading", "level": 2, "text": "Accordion" },
+    { "type": "accordion", "items": [
+      { "summary": "How are pages built?", "content": "Each page is a JSON file under `content/pages/`. The admin tool gives you a visual block editor.", "open": true },
+      { "summary": "Can I write Markdown?", "content": "The blog and project collections are MDX. Pages use blocks, but most text fields support `inline` markdown (**bold**, *italic*, [links](#))." },
+      { "summary": "Where do styles live?",  "content": "Tailwind utilities + CSS variables. Switch the accent palette from the header." }
+    ]},
+
+    { "type": "heading", "level": 2, "text": "Tabs" },
+    { "type": "tabs", "items": [
+      { "label": "Install", "content": "Run `npm install` then `npm run dev` to spin up the dev server." },
+      { "label": "Build",   "content": "`npm run build` outputs static HTML to `dist/`." },
+      { "label": "Admin",   "content": "`npm run admin` opens the visual content editor on http://localhost:4322." }
+    ]},
+
+    { "type": "heading", "level": 2, "text": "Countdown" },
+    { "type": "countdown", "target": "2027-01-01T00:00:00", "label": "Until 2027", "finishedText": "Welcome to 2027!" },
+
+    { "type": "heading", "level": 2, "text": "Marquee" },
+    { "type": "marquee", "text": "iruki.dev — making web pages a little more fun ", "speed": "normal", "icon": "✦" },
+
+    { "type": "heading", "level": 2, "text": "Color palette" },
+    { "type": "palette", "label": "Tailwind zinc-ish", "colors": [
+      { "name": "Slate",    "hex": "#0f172a" },
+      { "name": "Zinc",     "hex": "#27272a" },
+      { "name": "Indigo",   "hex": "#6366f1" },
+      { "name": "Rose",     "hex": "#f43f5e" },
+      { "name": "Emerald",  "hex": "#10b981" },
+      { "name": "Amber",    "hex": "#f59e0b" }
+    ]},
+
+    { "type": "heading", "level": 2, "text": "Math (KaTeX)" },
+    { "type": "math", "code": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\, dx = \\sqrt{\\pi}", "display": true },
+    { "type": "paragraph", "text": "Inline-style math works too: render small expressions in a centered block or display equations in full." },
+
+    { "type": "heading", "level": 2, "text": "Mermaid diagram" },
+    { "type": "mermaid", "code": "graph LR;\n  A[Idea] --> B{Worth shipping?};\n  B -- yes --> C[Build];\n  B -- no  --> D[Forget];\n  C --> E[Ship];", "caption": "A scientifically accurate decision tree." },
+
+    { "type": "heading", "level": 2, "text": "JS playground" },
+    { "type": "runner", "title": "Try it — Cmd/Ctrl+Enter to run", "code": "// Anything you log shows below.\nconsole.log('hello from the runner');\n\n// Or return a value:\nconst nums = [1, 2, 3, 4, 5];\nreturn nums.reduce((a, b) => a + b, 0);", "autoRun": false },
+
+    { "type": "heading", "level": 2, "text": "HTML/CSS/JS sandbox" },
+    { "type": "iframe-sandbox", "html": "<button id='b'>Click me</button><p id='out'>—</p>", "css": "body{font-family:system-ui;padding:24px;color:#111} button{padding:8px 14px;border:0;border-radius:6px;background:#6366f1;color:white;cursor:pointer} #out{margin-top:12px;font-family:monospace}", "js": "let n=0; document.getElementById('b').addEventListener('click', () => { n++; document.getElementById('out').textContent = 'clicked ' + n + 'x'; });", "height": 220 },
+
+    { "type": "heading", "level": 2, "text": "Embed (YouTube, Vimeo, CodePen)" },
+    { "type": "embed", "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "aspect": "16x9", "title": "A classic" },
+
+    { "type": "heading", "level": 2, "text": "And the basics still work" },
+    { "type": "columns", "columns": [
+      { "markdown": "**Headings, paragraphs, images, buttons, dividers, spacers, code, HTML, columns, cards** — all the original blocks are still here." },
+      { "markdown": "Mix and match across sections. The page builder is a *toolkit*, not a template." }
+    ]},
+
+    { "type": "divider" },
+    { "type": "paragraph", "text": "That's all of them. Steal what's useful.", "align": "center" }
+  ]
+}

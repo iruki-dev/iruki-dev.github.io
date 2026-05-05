@@ -5,6 +5,7 @@
 		"dockerfile": "Dockerfile"
 	},
 "remoteUser": "node",
+"forwardPorts": [4321, 4000],
 "features": {
 	"ghcr.io/siri404/devcontainer-ai-features/claude-code:1": {}
 }

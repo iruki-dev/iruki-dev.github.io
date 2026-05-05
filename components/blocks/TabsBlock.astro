@@ -1,0 +1,63 @@
+---
+import { renderBlockMd } from './_md';
+const { block } = Astro.props as { block: any };
+const items = (block.items || []).filter((it: any) => it && (it.label || it.content));
+const id = `tabs-${Math.random().toString(36).slice(2, 9)}`;
+---
+<div class="mb-6 tabs-host" data-tabs-id={id}>
+  <div role="tablist" class="flex flex-wrap gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-3">
+    {items.map((it: any, i: number) => (
+      <button
+        type="button"
+        role="tab"
+        data-tab-i={i}
+        aria-selected={i === 0 ? 'true' : 'false'}
+        class:list={[
+          'px-3 py-1.5 text-sm rounded-t-md border-b-2 -mb-px transition-colors',
+          i === 0
+            ? 'border-accent-500 text-accent-600 dark:text-accent-400 font-medium'
+            : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200',
+        ]}
+      >{it.label || `Tab ${i+1}`}</button>
+    ))}
+  </div>
+  <div>
+    {items.map((it: any, i: number) => (
+      <div
+        role="tabpanel"
+        data-tab-panel={i}
+        class="text-zinc-700 dark:text-zinc-300 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0"
+        style={i === 0 ? '' : 'display:none'}
+        set:html={renderBlockMd(it.content)}
+      />
+    ))}
+  </div>
+</div>
+
+<script is:inline>
+  (function(){
+    document.querySelectorAll('.tabs-host').forEach((host) => {
+      const tabs = host.querySelectorAll('[data-tab-i]');
+      const panels = host.querySelectorAll('[data-tab-panel]');
+      tabs.forEach((t) => {
+        t.addEventListener('click', () => {
+          const idx = +t.dataset.tabI;
+          tabs.forEach((x) => {
+            const active = +x.dataset.tabI === idx;
+            x.setAttribute('aria-selected', active ? 'true' : 'false');
+            x.classList.toggle('border-accent-500', active);
+            x.classList.toggle('text-accent-600', active);
+            x.classList.toggle('dark:text-accent-400', active);
+            x.classList.toggle('font-medium', active);
+            x.classList.toggle('border-transparent', !active);
+            x.classList.toggle('text-zinc-500', !active);
+            x.classList.toggle('dark:text-zinc-400', !active);
+          });
+          panels.forEach((p) => {
+            p.style.display = +p.dataset.tabPanel === idx ? '' : 'none';
+          });
+        });
+      });
+    });
+  })();
+</script>

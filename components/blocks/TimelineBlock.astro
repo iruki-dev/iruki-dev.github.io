@@ -1,0 +1,15 @@
+---
+import { renderBlockMd } from './_md';
+const { block } = Astro.props as { block: any };
+const items = block.items || [];
+---
+<ol class="mb-6 relative border-l-2 border-zinc-200 dark:border-zinc-800 pl-6 space-y-6">
+  {items.map((it: any) => (
+    <li class="relative">
+      <span class="absolute -left-[33px] top-1.5 w-3 h-3 rounded-full bg-accent-500 ring-4 ring-white dark:ring-zinc-950"></span>
+      {it.date && <div class="text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{it.date}</div>}
+      {it.title && <div class="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5">{it.title}</div>}
+      {it.text && <div class="mt-1 text-zinc-700 dark:text-zinc-300 leading-relaxed [&_p]:mb-2 [&_p:last-child]:mb-0" set:html={renderBlockMd(it.text)} />}
+    </li>
+  ))}
+</ol>

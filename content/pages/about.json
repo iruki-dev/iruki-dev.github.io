@@ -1,0 +1,25 @@
+{
+  "title": "About",
+  "description": "About iruki.dev",
+  "pubDate": "2026-05-04",
+  "draft": false,
+  "showInNav": true,
+  "navLabel": "About",
+  "navOrder": 3,
+  "blocks": [
+    { "type": "heading", "level": 1, "text": "About" },
+    {
+      "type": "paragraph",
+      "text": "Hi, I'm iruki. Developer and builder of things."
+    },
+    {
+      "type": "paragraph",
+      "text": "This site is my personal space on the internet. I write about things I'm learning, projects I'm working on, and whatever else I find interesting."
+    },
+    { "type": "heading", "level": 2, "text": "Contact" },
+    {
+      "type": "paragraph",
+      "text": "Email: [me@iruki.dev](mailto:me@iruki.dev)\n\nGitHub: [iruki-dev](https://github.com/iruki-dev)"
+    }
+  ]
+}

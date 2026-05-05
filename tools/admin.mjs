@@ -310,20 +310,23 @@ const server = createServer(async (req, res) => {
       if (method === 'GET') return json(res, readJson('site.json'));
       if (method === 'PUT') {
         const body = await readBody(req);
-        writeJson('site.json', body || {});
+        const existing = readJson('site.json') || {};
+        // Shallow merge so partial updates don't wipe nested keys (theme, features).
+        // Nested keys are merged one level deep too.
+        const incoming = body || {};
+        const merged = { ...existing, ...incoming };
+        for (const k of Object.keys(incoming)) {
+          if (incoming[k] && typeof incoming[k] === 'object' && !Array.isArray(incoming[k])
+              && existing[k] && typeof existing[k] === 'object' && !Array.isArray(existing[k])) {
+            merged[k] = { ...existing[k], ...incoming[k] };
+          }
+        }
+        writeJson('site.json', merged);
         return json(res, { ok: true });
       }
     }
 
-    // Navigation
-    if (path === '/api/nav') {
-      if (method === 'GET') return json(res, readJson('nav.json'));
-      if (method === 'PUT') {
-        const body = await readBody(req);
-        writeJson('nav.json', body || {});
-        return json(res, { ok: true });
-      }
-    }
+    // (Navigation API removed — nav is driven entirely by pages with showInNav.)
 
     // Media
     const mediaMatch = path.match(/^\/api\/media(?:\/([^/]+))?$/);
@@ -808,7 +811,6 @@ const ROUTES = {
   posts:     { icon:'✎', label:'Posts',      section:'Content' },
   projects:  { icon:'◫', label:'Projects',   section:'Content' },
   pages:     { icon:'▣', label:'Pages',      section:'Site builder' },
-  navigation:{ icon:'≡', label:'Navigation', section:'Site builder' },
   site:      { icon:'⚙', label:'Site',       section:'Site builder' },
   media:     { icon:'◧', label:'Media',      section:'Site builder' },
 };
@@ -1087,6 +1089,26 @@ const BLOCK_DEFS = {
   spacer:    { label:'Spacer',    icon:'↕',  default:()=>({type:'spacer',size:'md'}) },
   code:      { label:'Code',      icon:'</>',default:()=>({type:'code',code:'// code',lang:''}) },
   html:      { label:'HTML',      icon:'<>', default:()=>({type:'html',html:'<div>Custom HTML</div>'}) },
+  callout:   { label:'Callout',   icon:'❗', default:()=>({type:'callout',variant:'info',title:'',text:'A callout to highlight something.',icon:''}) },
+  quote:     { label:'Quote',     icon:'❝',  default:()=>({type:'quote',text:'A memorable quote.',author:'',source:'',sourceHref:''}) },
+  video:     { label:'Video',     icon:'▶',  default:()=>({type:'video',src:'',poster:'',autoplay:false,loop:false,muted:false,controls:true,caption:''}) },
+  audio:     { label:'Audio',     icon:'♪',  default:()=>({type:'audio',src:'',title:'',caption:''}) },
+  embed:     { label:'Embed',     icon:'⤴',  default:()=>({type:'embed',url:'',aspect:'16x9',title:''}) },
+  gallery:   { label:'Gallery',   icon:'⊞',  default:()=>({type:'gallery',items:[{src:'',alt:'',caption:''}],columns:3}) },
+  accordion: { label:'Accordion', icon:'≡',  default:()=>({type:'accordion',items:[{summary:'Question',content:'Answer',open:false}]}) },
+  tabs:      { label:'Tabs',      icon:'⊟',  default:()=>({type:'tabs',items:[{label:'Tab 1',content:'Content 1'},{label:'Tab 2',content:'Content 2'}]}) },
+  stats:     { label:'Stats',     icon:'#',  default:()=>({type:'stats',items:[{value:'100',label:'Stat',prefix:'',suffix:'',animate:true}]}) },
+  timeline:  { label:'Timeline',  icon:'│',  default:()=>({type:'timeline',items:[{date:'2026',title:'Milestone',text:'Description'}]}) },
+  progress:  { label:'Progress',  icon:'▰',  default:()=>({type:'progress',label:'Progress',value:50,showValue:true,striped:false}) },
+  countdown: { label:'Countdown', icon:'⏱',  default:()=>({type:'countdown',target:new Date(Date.now()+86400000*7).toISOString().slice(0,10),label:'Counting down',finishedText:'Time up!'}) },
+  mermaid:   { label:'Mermaid',   icon:'◇',  default:()=>({type:'mermaid',code:'graph TD;\\n  A-->B;\\n  A-->C;',caption:''}) },
+  math:      { label:'Math',      icon:'∑',  default:()=>({type:'math',code:'e^{i\\\\pi} + 1 = 0',display:true}) },
+  runner:    { label:'JS Runner', icon:'⚙',  default:()=>({type:'runner',title:'Playground',code:'console.log("hello");\\nreturn 1+1;',autoRun:false}) },
+  marquee:   { label:'Marquee',   icon:'≫',  default:()=>({type:'marquee',text:'Scrolling text — ',speed:'normal',reverse:false,icon:'★'}) },
+  palette:   { label:'Palette',   icon:'◧',  default:()=>({type:'palette',label:'Theme colors',colors:[{name:'Primary',hex:'#6366f1'},{name:'Accent',hex:'#10b981'}]}) },
+  'iframe-sandbox': { label:'Sandbox', icon:'⛶', default:()=>({type:'iframe-sandbox',html:'<h1>Hello</h1>',css:'body{font-family:sans-serif;padding:24px}',js:'',height:300}) },
+  'recent-posts':      { label:'Recent posts',      icon:'📰', default:()=>({type:'recent-posts',title:'Recent posts',limit:3,showAllLink:true}) },
+  'featured-projects': { label:'Featured projects', icon:'⭐', default:()=>({type:'featured-projects',title:'Featured projects',limit:3,featuredOnly:true,showAllLink:true}) },
 };
 
 async function renderPagesList(){
@@ -1151,7 +1173,7 @@ async function renderPageEdit(slug){
   });
   setContent('<div class="loading">Loading…</div>');
 
-  let data = { title:'', description:'', pubDate:today(), draft:true, showInNav:false, blocks:[] };
+  let data = { title:'', description:'', pubDate:today(), draft:true, showInNav:false, navLabel:'', navOrder:0, blocks:[] };
   if (slug){
     const r = await API.get('pages', slug);
     if (r.error){ setContent('<div class="alert error">'+esc(r.error)+'</div>'); return; }
@@ -1180,7 +1202,11 @@ async function renderPageEdit(slug){
           <div class="field"><label>Publish date</label><input id="p-date" type="date" value="\${esc(data.pubDate||today())}" /></div>
           <div class="toggle-row"><label for="p-draft">Draft (hidden)</label><input type="checkbox" id="p-draft" \${data.draft?'checked':''} /></div>
           <div class="toggle-row"><label for="p-shownav">Show in header nav</label><input type="checkbox" id="p-shownav" \${data.showInNav?'checked':''} /></div>
-          <div class="field" style="margin-top:10px"><label>Nav label <span style="color:var(--text3);font-weight:normal">(optional)</span></label><input id="p-navlabel" value="\${esc(data.navLabel||'')}" placeholder="Defaults to title" /></div>
+          <div class="field-row cols-2" style="margin-top:10px">
+            <div class="field"><label>Nav label <span style="color:var(--text3);font-weight:normal">(optional)</span></label><input id="p-navlabel" value="\${esc(data.navLabel||'')}" placeholder="Defaults to title" /></div>
+            <div class="field"><label>Nav order <span style="color:var(--text3);font-weight:normal">(asc)</span></label><input type="number" id="p-navorder" value="\${Number(data.navOrder)||0}" /></div>
+          </div>
+          <p style="font-size:11px;color:var(--text3);margin-top:4px">Slug <code>home</code> is rendered at <code>/</code>. Other slugs become <code>/your-slug</code>.</p>
         </div>
         <div class="side-section" id="block-inspector">
           <h3>Block inspector</h3>
@@ -1190,7 +1216,7 @@ async function renderPageEdit(slug){
     </div>
   \`);
 
-  ['p-title','p-desc','p-slug','p-date','p-draft','p-shownav','p-navlabel'].forEach(id => {
+  ['p-title','p-desc','p-slug','p-date','p-draft','p-shownav','p-navlabel','p-navorder'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', () => { pageMark(); syncSettings(); });
@@ -1210,6 +1236,7 @@ async function renderPageEdit(slug){
     pageState.data.draft    = $('#p-draft').checked;
     pageState.data.showInNav= $('#p-shownav').checked;
     pageState.data.navLabel = $('#p-navlabel').value.trim();
+    pageState.data.navOrder = Number($('#p-navorder').value) || 0;
   }
 
   renderCanvas();
@@ -1275,6 +1302,33 @@ function renderBlockCard(b, i){
   else if (b.type==='spacer') preview = '<div style="height:'+(b.size==='sm'?'12px':b.size==='lg'?'48px':b.size==='xl'?'72px':'24px')+';background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 6px,var(--bg3) 6px,var(--bg3) 12px);border-radius:4px"></div>';
   else if (b.type==='code') preview = '<pre style="background:var(--bg2);padding:10px;border-radius:6px;font-size:12px;overflow:auto;max-height:160px"><code>'+esc(b.code||'')+'</code></pre>';
   else if (b.type==='html') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-family:monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;overflow:auto;max-height:120px">'+esc(b.html||'')+'</div>';
+  else if (b.type==='callout'){
+    const colors = {info:'#0ea5e9',tip:'#10b981',warning:'#f59e0b',danger:'#f43f5e',note:'#71717a',success:'#22c55e'};
+    const c = colors[b.variant] || colors.info;
+    preview = '<div style="border-left:3px solid '+c+';background:var(--bg2);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12px"><strong style="color:'+c+'">'+esc(b.variant||'info')+'</strong>'+(b.title?' · <strong>'+esc(b.title)+'</strong>':'')+'<div style="color:var(--text2);margin-top:4px">'+esc((b.text||'').slice(0,200))+'</div></div>';
+  }
+  else if (b.type==='quote') preview = '<div style="border-left:3px solid var(--accent);padding-left:10px;font-style:italic;color:var(--text2);font-size:13px">"'+esc((b.text||'').slice(0,160))+'"'+(b.author?'<div style="margin-top:4px;font-style:normal;font-size:12px;color:var(--text3)">— '+esc(b.author)+(b.source?', '+esc(b.source):'')+'</div>':'')+'</div>';
+  else if (b.type==='video') preview = '<div style="padding:24px;background:var(--bg2);border-radius:6px;text-align:center;color:var(--text2);font-size:12px">▶ Video — '+esc(b.src||'(no source)')+'</div>';
+  else if (b.type==='audio') preview = '<div style="padding:14px;background:var(--bg2);border-radius:6px;color:var(--text2);font-size:12px">♪ '+esc(b.title||b.src||'(no audio)')+'</div>';
+  else if (b.type==='embed') preview = '<div style="padding:24px;background:var(--bg2);border-radius:6px;text-align:center;color:var(--text2);font-size:12px">⤴ Embed ('+esc(b.aspect||'16x9')+') — '+esc(b.url||'(no URL)')+'</div>';
+  else if (b.type==='gallery') preview = '<div style="display:grid;grid-template-columns:repeat('+(b.columns||3)+',1fr);gap:4px">'+(b.items||[]).map(it=>it.src?'<img src="'+esc(it.src)+'" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px"/>':'<div style="aspect-ratio:1/1;background:var(--bg2);border-radius:4px"></div>').join('')+'</div>';
+  else if (b.type==='accordion') preview = '<div style="font-size:12px">'+(b.items||[]).map(it=>'<div style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;margin-bottom:4px">▸ <strong>'+esc(it.summary||'(empty)')+'</strong></div>').join('')+'</div>';
+  else if (b.type==='tabs') preview = '<div style="font-size:12px"><div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:6px">'+(b.items||[]).map((it,i)=>'<span style="padding:4px 10px;border-bottom:2px solid '+(i===0?'var(--accent)':'transparent')+';color:'+(i===0?'var(--accent)':'var(--text2)')+'">'+esc(it.label||'tab')+'</span>').join('')+'</div><div style="color:var(--text2);padding:4px 0">'+esc(((b.items||[])[0]||{}).content?.slice(0,120) || '')+'</div></div>';
+  else if (b.type==='stats') preview = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">'+(b.items||[]).map(it=>'<div style="padding:8px;background:var(--bg2);border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--accent)">'+esc((it.prefix||'')+(it.value||'')+(it.suffix||''))+'</div><div style="font-size:10px;text-transform:uppercase;color:var(--text3)">'+esc(it.label||'')+'</div></div>').join('')+'</div>';
+  else if (b.type==='timeline') preview = '<ol style="list-style:none;padding:0;margin:0;border-left:2px solid var(--border);padding-left:14px;font-size:12px">'+(b.items||[]).map(it=>'<li style="margin-bottom:8px"><div style="color:var(--text3);font-size:10px;text-transform:uppercase">'+esc(it.date||'')+'</div><strong>'+esc(it.title||'')+'</strong><div style="color:var(--text2)">'+esc((it.text||'').slice(0,80))+'</div></li>').join('')+'</ol>';
+  else if (b.type==='progress'){
+    const v = Math.max(0,Math.min(100,Number(b.value)||0));
+    preview = '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+esc(b.label||'')+'</span><span style="color:var(--text3)">'+v+'%</span></div><div style="height:8px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+v+'%;background:var(--accent);transition:width .3s"></div></div></div>';
+  }
+  else if (b.type==='countdown') preview = '<div style="padding:14px;background:var(--bg2);border-radius:6px;text-align:center;font-size:12px;color:var(--text2)">⏱ '+esc(b.label||'Countdown')+' → <strong>'+esc(b.target||'(no target)')+'</strong></div>';
+  else if (b.type==='mermaid') preview = '<pre style="background:var(--bg2);padding:10px;border-radius:6px;font-size:12px;font-family:monospace;color:var(--text2);overflow:auto;max-height:160px">◇ '+esc(b.code||'')+'</pre>';
+  else if (b.type==='math') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-family:serif;font-style:italic;text-align:center">∑ '+esc(b.code||'')+'</div>';
+  else if (b.type==='runner') preview = '<div style="background:var(--bg2);border-radius:6px;overflow:hidden;font-size:12px"><div style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2)">⚙ '+esc(b.title||'Playground')+'</div><pre style="padding:8px 10px;margin:0;font-family:monospace;color:var(--text2);max-height:120px;overflow:auto">'+esc(b.code||'')+'</pre></div>';
+  else if (b.type==='marquee') preview = '<div style="overflow:hidden;background:var(--bg2);border-radius:6px;padding:6px 0;color:var(--text2);font-size:13px;white-space:nowrap">≫ '+esc(b.text||'').repeat(3)+'</div>';
+  else if (b.type==='palette') preview = '<div style="display:flex;gap:4px;flex-wrap:wrap">'+(b.colors||[]).map(c=>'<div style="width:48px"><div style="height:32px;background:'+esc(c.hex||'#000')+';border-radius:4px"></div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:center;font-family:monospace">'+esc(c.hex||'')+'</div></div>').join('')+'</div>';
+  else if (b.type==='iframe-sandbox') preview = '<div style="font-family:monospace;font-size:11px;background:var(--bg2);border-radius:6px;padding:8px;color:var(--text2)">⛶ HTML/CSS/JS sandbox · '+(b.height||300)+'px tall</div>';
+  else if (b.type==='recent-posts') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px"><div style="color:var(--text3);text-transform:uppercase;font-size:10px;margin-bottom:4px">📰 '+esc(b.title||'Recent posts')+'</div><div style="color:var(--text2)">Renders the latest '+(b.limit||3)+' published blog post(s) at build time.</div></div>';
+  else if (b.type==='featured-projects') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px"><div style="color:var(--text3);text-transform:uppercase;font-size:10px;margin-bottom:4px">⭐ '+esc(b.title||'Featured projects')+'</div><div style="color:var(--text2)">Renders '+(b.limit||3)+' '+(b.featuredOnly!==false?'featured':'most recent')+' project(s) at build time.</div></div>';
 
   return \`<div class="block\${selectedBlock===i?' selected':''}" data-bi="\${i}">
     <div class="block-head">
@@ -1370,6 +1424,185 @@ function buildInspector(b){
     <div class="field"><label>Language (optional)</label><input data-k="lang" value="\${esc(b.lang||'')}" placeholder="js, ts, html…" /></div>
     <div class="field"><label>Code</label><textarea data-k="code" class="editor" rows="10">\${esc(b.code||'')}</textarea></div>\`;
   if (b.type==='html') return '<div class="field"><label>Custom HTML <span style="color:var(--text3);font-weight:normal">(advanced)</span></label><textarea data-k="html" class="editor" rows="10">'+esc(b.html||'')+'</textarea></div>';
+
+  if (b.type==='callout') return \`
+    <div class="field-row cols-2">
+      <div class="field"><label>Variant</label><select data-k="variant">\${['info','tip','warning','danger','note','success'].map(v=>'<option value="'+v+'"'+(b.variant===v?' selected':'')+'>'+v+'</option>').join('')}</select></div>
+      <div class="field"><label>Icon (emoji, optional)</label><input data-k="icon" value="\${esc(b.icon||'')}" placeholder="overrides default" /></div>
+    </div>
+    <div class="field"><label>Title (optional)</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    <div class="field"><label>Text <span style="color:var(--text3);font-weight:normal">(supports **bold**, *italic*, [link](url))</span></label><textarea data-k="text" rows="4">\${esc(b.text||'')}</textarea></div>\`;
+
+  if (b.type==='quote') return \`
+    <div class="field"><label>Text</label><textarea data-k="text" rows="4">\${esc(b.text||'')}</textarea></div>
+    <div class="field-row cols-2">
+      <div class="field"><label>Author</label><input data-k="author" value="\${esc(b.author||'')}" /></div>
+      <div class="field"><label>Source</label><input data-k="source" value="\${esc(b.source||'')}" /></div>
+    </div>
+    <div class="field"><label>Source link (optional)</label><input data-k="sourceHref" value="\${esc(b.sourceHref||'')}" placeholder="https://…" /></div>\`;
+
+  if (b.type==='video') return \`
+    <div class="field"><label>Source URL <span style="color:var(--text3);font-weight:normal">(.mp4/.webm or YouTube/Vimeo URL)</span></label>
+      <div style="display:flex;gap:6px"><input data-k="src" value="\${esc(b.src||'')}" style="flex:1" /><button class="btn btn-secondary btn-sm" data-pick="src">Pick</button></div>
+    </div>
+    <div class="field"><label>Poster image (optional)</label>
+      <div style="display:flex;gap:6px"><input data-k="poster" value="\${esc(b.poster||'')}" style="flex:1" /><button class="btn btn-secondary btn-sm" data-pick="poster">Pick</button></div>
+    </div>
+    <div class="field"><label>Caption</label><input data-k="caption" value="\${esc(b.caption||'')}" /></div>
+    <div class="toggle-row"><label>Controls</label><input type="checkbox" data-k="controls" \${b.controls!==false?'checked':''} /></div>
+    <div class="toggle-row"><label>Autoplay</label><input type="checkbox" data-k="autoplay" \${b.autoplay?'checked':''} /></div>
+    <div class="toggle-row"><label>Loop</label><input type="checkbox" data-k="loop" \${b.loop?'checked':''} /></div>
+    <div class="toggle-row"><label>Muted</label><input type="checkbox" data-k="muted" \${b.muted?'checked':''} /></div>\`;
+
+  if (b.type==='audio') return \`
+    <div class="field"><label>Source URL</label>
+      <div style="display:flex;gap:6px"><input data-k="src" value="\${esc(b.src||'')}" style="flex:1" /><button class="btn btn-secondary btn-sm" data-pick="src">Pick</button></div>
+    </div>
+    <div class="field"><label>Title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    <div class="field"><label>Caption</label><input data-k="caption" value="\${esc(b.caption||'')}" /></div>\`;
+
+  if (b.type==='embed') return \`
+    <div class="field"><label>URL <span style="color:var(--text3);font-weight:normal">(YouTube/Vimeo/CodePen/iframe-friendly URL)</span></label><input data-k="url" value="\${esc(b.url||'')}" placeholder="https://…" /></div>
+    <div class="field-row cols-2">
+      <div class="field"><label>Aspect ratio</label><select data-k="aspect">\${['16x9','4x3','1x1','9x16'].map(a=>'<option value="'+a+'"'+(b.aspect===a?' selected':'')+'>'+a+'</option>').join('')}</select></div>
+      <div class="field"><label>Title (a11y)</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    </div>\`;
+
+  if (b.type==='gallery'){
+    const itHtml = (b.items||[]).map((it,i) => \`
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+        <div class="field"><label>Image \${i+1} <button class="btn btn-danger btn-xs" data-rm-arr="items" data-rm-i="\${i}" style="float:right">remove</button></label>
+          <div style="display:flex;gap:6px"><input data-list="items" data-li="\${i}" data-lk="src" value="\${esc(it.src||'')}" style="flex:1" /></div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field"><label>Alt</label><input data-list="items" data-li="\${i}" data-lk="alt" value="\${esc(it.alt||'')}" /></div>
+          <div class="field"><label>Caption</label><input data-list="items" data-li="\${i}" data-lk="caption" value="\${esc(it.caption||'')}" /></div>
+        </div>
+      </div>\`).join('');
+    return \`
+      <div class="field"><label>Columns</label><input type="number" min="1" max="6" data-k="columns" value="\${b.columns||3}" /></div>
+      <button class="btn btn-secondary btn-sm" data-list-add="items" data-template='{"src":"","alt":"","caption":""}'>+ Add image</button>
+      <div style="margin-top:10px">\${itHtml}</div>\`;
+  }
+
+  if (b.type==='accordion'){
+    const itHtml = (b.items||[]).map((it,i) => \`
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+        <div class="field"><label>Item \${i+1} <button class="btn btn-danger btn-xs" data-rm-arr="items" data-rm-i="\${i}" style="float:right">remove</button></label>
+          <input data-list="items" data-li="\${i}" data-lk="summary" value="\${esc(it.summary||'')}" placeholder="Summary / question" />
+        </div>
+        <div class="field"><label>Content</label><textarea data-list="items" data-li="\${i}" data-lk="content" rows="3">\${esc(it.content||'')}</textarea></div>
+        <div class="toggle-row"><label>Open by default</label><input type="checkbox" data-list="items" data-li="\${i}" data-lk="open" \${it.open?'checked':''} /></div>
+      </div>\`).join('');
+    return '<button class="btn btn-secondary btn-sm" data-list-add="items" data-template=\\'{"summary":"New item","content":"","open":false}\\'>+ Add item</button><div style="margin-top:10px">'+itHtml+'</div>';
+  }
+
+  if (b.type==='tabs'){
+    const itHtml = (b.items||[]).map((it,i) => \`
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+        <div class="field"><label>Tab \${i+1} <button class="btn btn-danger btn-xs" data-rm-arr="items" data-rm-i="\${i}" style="float:right">remove</button></label>
+          <input data-list="items" data-li="\${i}" data-lk="label" value="\${esc(it.label||'')}" placeholder="Label" />
+        </div>
+        <div class="field"><label>Content</label><textarea data-list="items" data-li="\${i}" data-lk="content" rows="3">\${esc(it.content||'')}</textarea></div>
+      </div>\`).join('');
+    return '<button class="btn btn-secondary btn-sm" data-list-add="items" data-template=\\'{"label":"New tab","content":""}\\'>+ Add tab</button><div style="margin-top:10px">'+itHtml+'</div>';
+  }
+
+  if (b.type==='stats'){
+    const itHtml = (b.items||[]).map((it,i) => \`
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+        <div class="field-row cols-2">
+          <div class="field"><label>Value <button class="btn btn-danger btn-xs" data-rm-arr="items" data-rm-i="\${i}" style="float:right">remove</button></label>
+            <input data-list="items" data-li="\${i}" data-lk="value" value="\${esc(it.value||'')}" placeholder="42" />
+          </div>
+          <div class="field"><label>Label</label><input data-list="items" data-li="\${i}" data-lk="label" value="\${esc(it.label||'')}" /></div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field"><label>Prefix</label><input data-list="items" data-li="\${i}" data-lk="prefix" value="\${esc(it.prefix||'')}" placeholder="$" /></div>
+          <div class="field"><label>Suffix</label><input data-list="items" data-li="\${i}" data-lk="suffix" value="\${esc(it.suffix||'')}" placeholder="%" /></div>
+        </div>
+        <div class="toggle-row"><label>Animate on scroll</label><input type="checkbox" data-list="items" data-li="\${i}" data-lk="animate" \${it.animate!==false?'checked':''} /></div>
+      </div>\`).join('');
+    return '<button class="btn btn-secondary btn-sm" data-list-add="items" data-template=\\'{"value":"0","label":"","prefix":"","suffix":"","animate":true}\\'>+ Add stat</button><div style="margin-top:10px">'+itHtml+'</div>';
+  }
+
+  if (b.type==='timeline'){
+    const itHtml = (b.items||[]).map((it,i) => \`
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px">
+        <div class="field-row cols-2">
+          <div class="field"><label>Date <button class="btn btn-danger btn-xs" data-rm-arr="items" data-rm-i="\${i}" style="float:right">remove</button></label>
+            <input data-list="items" data-li="\${i}" data-lk="date" value="\${esc(it.date||'')}" />
+          </div>
+          <div class="field"><label>Title</label><input data-list="items" data-li="\${i}" data-lk="title" value="\${esc(it.title||'')}" /></div>
+        </div>
+        <div class="field"><label>Text</label><textarea data-list="items" data-li="\${i}" data-lk="text" rows="2">\${esc(it.text||'')}</textarea></div>
+      </div>\`).join('');
+    return '<button class="btn btn-secondary btn-sm" data-list-add="items" data-template=\\'{"date":"","title":"","text":""}\\'>+ Add event</button><div style="margin-top:10px">'+itHtml+'</div>';
+  }
+
+  if (b.type==='progress') return \`
+    <div class="field"><label>Label</label><input data-k="label" value="\${esc(b.label||'')}" /></div>
+    <div class="field"><label>Value (0–100)</label><input type="number" min="0" max="100" data-k="value" value="\${Number(b.value)||0}" /></div>
+    <div class="toggle-row"><label>Show value %</label><input type="checkbox" data-k="showValue" \${b.showValue!==false?'checked':''} /></div>
+    <div class="toggle-row"><label>Striped (animated)</label><input type="checkbox" data-k="striped" \${b.striped?'checked':''} /></div>\`;
+
+  if (b.type==='countdown') return \`
+    <div class="field"><label>Target date/time <span style="color:var(--text3);font-weight:normal">(YYYY-MM-DD or ISO)</span></label><input data-k="target" value="\${esc(b.target||'')}" placeholder="2026-12-31T00:00:00" /></div>
+    <div class="field"><label>Label</label><input data-k="label" value="\${esc(b.label||'')}" /></div>
+    <div class="field"><label>Finished text</label><input data-k="finishedText" value="\${esc(b.finishedText||'')}" /></div>\`;
+
+  if (b.type==='mermaid') return \`
+    <div class="field"><label>Mermaid syntax <a href="https://mermaid.js.org/syntax/flowchart.html" target="_blank" style="color:var(--accent);font-weight:normal;font-size:11px">(docs ↗)</a></label><textarea data-k="code" class="editor" rows="8">\${esc(b.code||'')}</textarea></div>
+    <div class="field"><label>Caption</label><input data-k="caption" value="\${esc(b.caption||'')}" /></div>\`;
+
+  if (b.type==='math') return \`
+    <div class="field"><label>LaTeX (KaTeX) <a href="https://katex.org/docs/supported.html" target="_blank" style="color:var(--accent);font-weight:normal;font-size:11px">(supported ↗)</a></label><textarea data-k="code" class="editor" rows="3">\${esc(b.code||'')}</textarea></div>
+    <div class="toggle-row"><label>Display mode (block)</label><input type="checkbox" data-k="display" \${b.display!==false?'checked':''} /></div>\`;
+
+  if (b.type==='runner') return \`
+    <div class="field"><label>Title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    <div class="field"><label>JavaScript code <span style="color:var(--text3);font-weight:normal">(use \\\`return\\\` to display a value, \\\`console.log\\\` to log)</span></label><textarea data-k="code" class="editor" rows="8">\${esc(b.code||'')}</textarea></div>
+    <div class="toggle-row"><label>Auto-run on page load</label><input type="checkbox" data-k="autoRun" \${b.autoRun?'checked':''} /></div>\`;
+
+  if (b.type==='marquee') return \`
+    <div class="field"><label>Text</label><input data-k="text" value="\${esc(b.text||'')}" /></div>
+    <div class="field-row cols-2">
+      <div class="field"><label>Speed</label><select data-k="speed">\${['slow','normal','fast'].map(s=>'<option value="'+s+'"'+(b.speed===s?' selected':'')+'>'+s+'</option>').join('')}</select></div>
+      <div class="field"><label>Separator icon</label><input data-k="icon" value="\${esc(b.icon||'')}" /></div>
+    </div>
+    <div class="toggle-row"><label>Reverse direction</label><input type="checkbox" data-k="reverse" \${b.reverse?'checked':''} /></div>\`;
+
+  if (b.type==='palette'){
+    const itHtml = (b.colors||[]).map((it,i) => \`
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input type="color" data-list="colors" data-li="\${i}" data-lk="hex" value="\${esc(it.hex||'#000000')}" style="width:40px;height:32px;padding:0;border:1px solid var(--border);border-radius:4px;background:transparent" />
+        <input data-list="colors" data-li="\${i}" data-lk="hex" value="\${esc(it.hex||'')}" placeholder="#hex" style="font-family:monospace;flex:0 0 110px" />
+        <input data-list="colors" data-li="\${i}" data-lk="name" value="\${esc(it.name||'')}" placeholder="Name" style="flex:1" />
+        <button class="btn btn-danger btn-xs" data-rm-arr="colors" data-rm-i="\${i}">×</button>
+      </div>\`).join('');
+    return \`
+      <div class="field"><label>Label (optional)</label><input data-k="label" value="\${esc(b.label||'')}" /></div>
+      <button class="btn btn-secondary btn-sm" data-list-add="colors" data-template='{"name":"","hex":"#6366f1"}'>+ Add color</button>
+      <div style="margin-top:10px">\${itHtml}</div>\`;
+  }
+
+  if (b.type==='iframe-sandbox') return \`
+    <div class="field"><label>Height (px)</label><input type="number" min="100" max="2000" data-k="height" value="\${Number(b.height)||300}" /></div>
+    <div class="field"><label>HTML</label><textarea data-k="html" class="editor" rows="5">\${esc(b.html||'')}</textarea></div>
+    <div class="field"><label>CSS</label><textarea data-k="css" class="editor" rows="4">\${esc(b.css||'')}</textarea></div>
+    <div class="field"><label>JS</label><textarea data-k="js" class="editor" rows="5">\${esc(b.js||'')}</textarea></div>\`;
+
+  if (b.type==='recent-posts') return \`
+    <div class="field"><label>Section title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    <div class="field"><label>How many posts</label><input type="number" min="1" max="20" data-k="limit" value="\${Number(b.limit)||3}" /></div>
+    <div class="toggle-row"><label>Show "All posts →" link</label><input type="checkbox" data-k="showAllLink" \${b.showAllLink!==false?'checked':''} /></div>\`;
+
+  if (b.type==='featured-projects') return \`
+    <div class="field"><label>Section title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+    <div class="field"><label>How many projects</label><input type="number" min="1" max="20" data-k="limit" value="\${Number(b.limit)||3}" /></div>
+    <div class="toggle-row"><label>Featured only <span style="color:var(--text3);font-weight:normal">(off = most recent)</span></label><input type="checkbox" data-k="featuredOnly" \${b.featuredOnly!==false?'checked':''} /></div>
+    <div class="toggle-row"><label>Show "All projects →" link</label><input type="checkbox" data-k="showAllLink" \${b.showAllLink!==false?'checked':''} /></div>\`;
+
   return '';
 }
 
@@ -1380,6 +1613,10 @@ function bindInspector(b, host){
     const upd = () => {
       let v = el.type==='checkbox' ? el.checked : el.value;
       if (key==='level') v = parseInt(v,10);
+      else if (el.type === 'number') {
+        const n = parseFloat(v);
+        if (!Number.isNaN(n)) v = n;
+      }
       b[key] = v;
       pageMark();
       renderCanvas();
@@ -1431,61 +1668,37 @@ function bindInspector(b, host){
     b.items.splice(+btn.dataset.rmcard, 1);
     pageMark(); renderInspector(); renderCanvas();
   });
-}
-
-// ─── Navigation editor ───
-async function renderNavigation(){
-  setTopbar({
-    crumbs:'<strong style="color:var(--text)">Navigation</strong>',
-    actions:'<span id="dirty-dot"></span><button class="btn btn-primary btn-sm" id="save-nav">Save</button>',
+  // ── Generic list inputs (used by gallery, accordion, tabs, stats, timeline, palette) ──
+  host.querySelectorAll('[data-list]').forEach(el => {
+    const arr = el.dataset.list;
+    const i = +el.dataset.li;
+    const k = el.dataset.lk;
+    const upd = () => {
+      let v = el.type==='checkbox' ? el.checked : el.value;
+      if (!Array.isArray(b[arr])) b[arr] = [];
+      while (b[arr].length <= i) b[arr].push({});
+      b[arr][i][k] = v;
+      pageMark(); renderCanvas();
+    };
+    el.addEventListener('input', upd);
+    el.addEventListener('change', upd);
   });
-  setContent('<div class="loading">Loading…</div>', true);
-  const nav = await API.list('nav');
-  const links = Array.isArray(nav.links) ? [...nav.links] : [];
-
-  setContent(\`
-    <div class="card">
-      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Links shown in the site header. Custom pages with "Show in nav" enabled are added automatically below these.</p>
-      <div id="nav-list"></div>
-      <button class="btn btn-secondary btn-sm" id="add-link" style="margin-top:12px">+ Add link</button>
-    </div>
-  \`, true);
-
-  let dirty = false;
-  const mark = () => { if (dirty) return; dirty = true; const d=$('#dirty-dot'); if (d) d.outerHTML = '<span id="dirty-dot" class="dot-dirty">unsaved</span>'; };
-  const draw = () => {
-    $('#nav-list').innerHTML = links.length ? links.map((l,i) => \`
-      <div class="list-item" style="border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;padding:10px 12px">
-        <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;flex:1">
-          <input data-i="\${i}" data-k="label" value="\${esc(l.label||'')}" placeholder="Label" />
-          <input data-i="\${i}" data-k="href" value="\${esc(l.href||'')}" placeholder="/path or https://…" />
-        </div>
-        <div class="item-actions">
-          <button class="btn btn-ghost btn-icon btn-sm" data-up="\${i}" \${i===0?'disabled':''}>↑</button>
-          <button class="btn btn-ghost btn-icon btn-sm" data-down="\${i}" \${i===links.length-1?'disabled':''}>↓</button>
-          <button class="btn btn-danger btn-icon btn-sm" data-del="\${i}">×</button>
-        </div>
-      </div>\`).join('') : '<p style="color:var(--text3);text-align:center;padding:18px">No links yet. Add one below.</p>';
-    $('#nav-list').querySelectorAll('input').forEach(el => el.oninput = () => {
-      links[+el.dataset.i][el.dataset.k] = el.value;
-      mark();
-    });
-    $('#nav-list').querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i=+b.dataset.up; if (i>0){ [links[i-1],links[i]]=[links[i],links[i-1]]; mark(); draw(); } });
-    $('#nav-list').querySelectorAll('[data-down]').forEach(b => b.onclick = () => { const i=+b.dataset.down; if (i<links.length-1){ [links[i+1],links[i]]=[links[i],links[i+1]]; mark(); draw(); } });
-    $('#nav-list').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { links.splice(+b.dataset.del,1); mark(); draw(); });
-  };
-  draw();
-  $('#add-link').onclick = () => { links.push({href:'/', label:'New link'}); mark(); draw(); };
-  $('#save-nav').onclick = async () => {
-    for (const l of links){
-      if (!l.label?.trim() || !l.href?.trim()){ toast('All links need a label and URL.','error'); return; }
+  host.querySelectorAll('[data-list-add]').forEach(btn => btn.onclick = () => {
+    const arr = btn.dataset.listAdd;
+    let tpl = {};
+    try { tpl = btn.dataset.template ? JSON.parse(btn.dataset.template) : {}; } catch(_) {}
+    if (!Array.isArray(b[arr])) b[arr] = [];
+    b[arr].push({...tpl});
+    pageMark(); renderInspector(); renderCanvas();
+  });
+  host.querySelectorAll('[data-rm-arr]').forEach(btn => btn.onclick = () => {
+    const arr = btn.dataset.rmArr;
+    const i = +btn.dataset.rmI;
+    if (Array.isArray(b[arr])) {
+      b[arr].splice(i, 1);
+      pageMark(); renderInspector(); renderCanvas();
     }
-    const r = await API.putRaw('nav', { links });
-    if (r.error){ toast(r.error,'error'); return; }
-    dirty = false;
-    const d=$('#dirty-dot'); if (d) d.outerHTML = '<span id="dirty-dot" class="dot-saved">saved</span>';
-    toast('Navigation saved');
-  };
+  });
 }
 
 // ─── Site settings ───
@@ -1496,9 +1709,13 @@ async function renderSite(){
   });
   setContent('<div class="loading">Loading…</div>', true);
   const s = await API.list('site');
+  const theme = s.theme || {};
+  const features = s.features || {};
+  const palettes = ['indigo','rose','emerald','amber','sky','violet','crimson','lime'];
+  const swatch = { indigo:'#6366f1', rose:'#f43f5e', emerald:'#10b981', amber:'#f59e0b', sky:'#0ea5e9', violet:'#8b5cf6', crimson:'#ef4444', lime:'#84cc16' };
   setContent(\`
     <div class="card">
-      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Site-wide metadata. Used in <code>&lt;title&gt;</code>, OpenGraph tags, and the About page.</p>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Site-wide metadata. Used in <code>&lt;title&gt;</code>, OpenGraph tags, and the home/about pages.</p>
       <div class="field-row cols-2">
         <div class="field"><label>Site title</label><input id="s-title" value="\${esc(s.title||'')}" placeholder="iruki.dev" /></div>
         <div class="field"><label>Author</label><input id="s-author" value="\${esc(s.author||'')}" placeholder="iruki" /></div>
@@ -1510,13 +1727,64 @@ async function renderSite(){
         <div class="field"><label>GitHub URL</label><input id="s-github" value="\${esc(s.github||'')}" placeholder="https://github.com/…" /></div>
       </div>
     </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 10px;font-size:14px;font-weight:600">Theme</h3>
+      <div class="field"><label>Accent palette</label>
+        <div id="palette-picker" style="display:flex;gap:6px;flex-wrap:wrap">
+          \${palettes.map(p => \`
+            <button type="button" data-palette="\${p}" class="\${(theme.palette||'indigo')===p?'palette-active':''}"
+              style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:12px;color:var(--text)">
+              <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:\${swatch[p]}"></span>\${p}
+            </button>\`).join('')}
+        </div>
+        <p style="color:var(--text3);font-size:11px;margin-top:6px">Visitors see this palette site-wide. They can still toggle light/dark.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 10px;font-size:14px;font-weight:600">Features</h3>
+      <div class="toggle-row"><label>Reading progress bar <span style="color:var(--text3);font-weight:normal">(top scroll indicator)</span></label><input type="checkbox" id="f-reading" \${features.readingProgress!==false?'checked':''} /></div>
+      <div class="toggle-row"><label>Back-to-top button</label><input type="checkbox" id="f-back" \${features.backToTop!==false?'checked':''} /></div>
+      <div class="toggle-row"><label>Konami code easter egg</label><input type="checkbox" id="f-konami" \${features.konami?'checked':''} /></div>
+    </div>
+
+    <style>
+      .palette-active { border-color: var(--accent) !important; box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 25%, transparent); }
+      .toggle-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; }
+    </style>
   \`, true);
+
   let dirty = false;
   const mark = () => { if (dirty) return; dirty = true; const d=$('#dirty-dot'); if (d) d.outerHTML = '<span id="dirty-dot" class="dot-dirty">unsaved</span>'; };
   ['s-title','s-author','s-desc','s-url','s-email','s-github'].forEach(id => $('#'+id).addEventListener('input', mark));
+  ['f-reading','f-back','f-konami'].forEach(id => $('#'+id).addEventListener('change', mark));
+
+  let selectedPalette = theme.palette || 'indigo';
+  $('#palette-picker').querySelectorAll('[data-palette]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPalette = btn.dataset.palette;
+      $('#palette-picker').querySelectorAll('[data-palette]').forEach(b => b.classList.toggle('palette-active', b === btn));
+      mark();
+    });
+  });
+
   $('#save-site').onclick = async () => {
     const g = id => $('#'+id).value.trim();
-    const data = { title:g('s-title'), description:g('s-desc'), url:g('s-url'), author:g('s-author'), github:g('s-github'), email:g('s-email') };
+    const data = {
+      title: g('s-title'),
+      description: g('s-desc'),
+      url: g('s-url'),
+      author: g('s-author'),
+      github: g('s-github'),
+      email: g('s-email'),
+      theme: { palette: selectedPalette },
+      features: {
+        readingProgress: $('#f-reading').checked,
+        backToTop: $('#f-back').checked,
+        konami: $('#f-konami').checked,
+      },
+    };
     if (!data.title){ toast('Site title is required.','error'); return; }
     const r = await API.putRaw('site', data);
     if (r.error){ toast(r.error,'error'); return; }
@@ -1597,7 +1865,6 @@ function render(){
   if (currentRoute === 'pages') {
     return ('edit' in currentParams) ? renderPageEdit(currentParams.edit || '') : renderPagesList();
   }
-  if (currentRoute === 'navigation') return renderNavigation();
   if (currentRoute === 'site') return renderSite();
   if (currentRoute === 'media') return renderMedia();
   setContent('<div class="empty">Unknown route.</div>');

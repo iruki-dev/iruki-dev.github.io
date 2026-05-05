@@ -1,0 +1,63 @@
+---
+const { block } = Astro.props as { block: any };
+const id = `runner-${Math.random().toString(36).slice(2, 9)}`;
+---
+<div id={id} class="mb-6 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden runner-host" data-autorun={block.autoRun ? '1' : '0'}>
+  <div class="flex items-center justify-between px-3 py-2 bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-sm">
+    <span class="font-medium text-zinc-700 dark:text-zinc-300">{block.title || 'JavaScript playground'}</span>
+    <div class="flex gap-1">
+      <button type="button" class="runner-run px-2.5 py-1 rounded bg-accent-500 hover:bg-accent-600 text-white text-xs font-medium">▶ Run</button>
+      <button type="button" class="runner-clear px-2.5 py-1 rounded border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs">Clear</button>
+    </div>
+  </div>
+  <textarea class="runner-code w-full p-3 text-sm font-mono bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border-0 outline-none resize-y min-h-[120px]" spellcheck="false">{block.code || ''}</textarea>
+  <div class="runner-out border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 p-3 text-xs font-mono whitespace-pre-wrap break-words text-zinc-700 dark:text-zinc-300 min-h-[2rem] max-h-64 overflow-auto"></div>
+</div>
+
+<script is:inline>
+  (function(){
+    document.querySelectorAll('.runner-host').forEach((host) => {
+      const code = host.querySelector('.runner-code');
+      const out  = host.querySelector('.runner-out');
+      const run  = host.querySelector('.runner-run');
+      const clr  = host.querySelector('.runner-clear');
+
+      function fmt(v){
+        if (v === undefined) return 'undefined';
+        if (v === null) return 'null';
+        if (typeof v === 'string') return v;
+        try { return JSON.stringify(v, null, 2); } catch(_) { return String(v); }
+      }
+      function append(line, kind){
+        const span = document.createElement('div');
+        if (kind === 'err') span.style.color = '#ef4444';
+        else if (kind === 'warn') span.style.color = '#f59e0b';
+        else if (kind === 'ret') span.style.color = 'rgb(var(--accent-500))';
+        span.textContent = line;
+        out.appendChild(span);
+      }
+      function execute(){
+        out.textContent = '';
+        const src = code.value;
+        const log = (...a) => append(a.map(fmt).join(' '), 'log');
+        const warn = (...a) => append(a.map(fmt).join(' '), 'warn');
+        const err = (...a) => append(a.map(fmt).join(' '), 'err');
+        const console2 = { log, warn, error: err, info: log, debug: log };
+        try {
+          const fn = new Function('console', '"use strict";\n' + src);
+          const result = fn(console2);
+          if (result !== undefined) append('⇒ ' + fmt(result), 'ret');
+          if (!out.textContent) append('(no output)', 'log');
+        } catch (e) {
+          append(String(e), 'err');
+        }
+      }
+      run.addEventListener('click', execute);
+      clr.addEventListener('click', () => { out.textContent = ''; });
+      code.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); execute(); }
+      });
+      if (host.dataset.autorun === '1') execute();
+    });
+  })();
+</script>

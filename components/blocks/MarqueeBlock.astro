@@ -1,0 +1,18 @@
+---
+const { block } = Astro.props as { block: any };
+const speed = block.speed === 'slow' ? '40s' : block.speed === 'fast' ? '10s' : '20s';
+const reverse = block.reverse;
+const text = block.text || '';
+const icon = block.icon || '★';
+const segment = `${text} ${icon} `;
+const repeated = segment.repeat(8);
+---
+<div class="mb-6 marquee-host overflow-hidden border-y border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40">
+  <div
+    class:list={['marquee-track inline-flex whitespace-nowrap py-3 text-zinc-700 dark:text-zinc-200 font-medium', reverse && 'reverse']}
+    style={`--marquee-duration:${speed}`}
+  >
+    <span>{repeated}</span>
+    <span>{repeated}</span>
+  </div>
+</div>

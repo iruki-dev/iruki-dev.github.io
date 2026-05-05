@@ -1,6 +1,8 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import ReadingProgress from '../components/ReadingProgress.astro';
+import BackToTop from '../components/BackToTop.astro';
 import '../styles/global.css';
 import { SITE } from '../config';
 
@@ -18,10 +20,13 @@ const {
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const siteTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
+
+const palette = SITE.theme?.palette ?? 'indigo';
+const features = SITE.features ?? {};
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-palette={palette}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -42,6 +47,7 @@ const siteTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
     <meta name="twitter:description" content={description} />
 
     <script is:inline>
+      // Light/dark — visitor-controlled, persisted in localStorage.
       const stored = localStorage.getItem('theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       if (stored ? stored === 'dark' : prefersDark) {
@@ -50,10 +56,38 @@ const siteTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
+    {features.readingProgress && <ReadingProgress />}
     <Header />
     <main class="container flex-1 py-12">
       <slot />
     </main>
     <Footer />
+    {features.backToTop && <BackToTop />}
+    {features.konami && (
+      <script is:inline>
+        (function(){
+          const seq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+          let i = 0;
+          window.addEventListener('keydown', (e) => {
+            const k = e.key;
+            if (k === seq[i] || k.toLowerCase() === seq[i]) {
+              i++;
+              if (i === seq.length) {
+                i = 0;
+                document.body.classList.toggle('konami');
+                const s = document.createElement('style');
+                s.id = 'konami-style';
+                if (document.body.classList.contains('konami')) {
+                  s.textContent = '@keyframes kspin{to{transform:rotate(360deg)}}body.konami{animation:kspin 4s linear infinite}';
+                  document.head.appendChild(s);
+                } else {
+                  document.getElementById('konami-style')?.remove();
+                }
+              }
+            } else { i = 0; }
+          });
+        })();
+      </script>
+    )}
   </body>
 </html>

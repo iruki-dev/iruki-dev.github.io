@@ -1,0 +1,41 @@
+---
+const { block } = Astro.props as { block: any };
+const code = block.code || '';
+const display = block.display !== false;
+---
+<div class={`mb-6 ${display ? 'text-center' : ''} math-host`} data-display={display ? '1' : '0'}>
+  <span class="math-src" style="display:none">{code}</span>
+  <noscript><code>{code}</code></noscript>
+</div>
+
+<script is:inline>
+  (function(){
+    if (!document.querySelector('.math-host')) return;
+    function ensureKatex(cb){
+      if (window.katex) return cb();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+      document.head.appendChild(link);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
+      s.onload = cb;
+      document.head.appendChild(s);
+    }
+    ensureKatex(() => {
+      document.querySelectorAll('.math-host').forEach((host) => {
+        if (host.dataset.rendered) return;
+        host.dataset.rendered = '1';
+        const src = host.querySelector('.math-src')?.textContent || '';
+        try {
+          window.katex.render(src, host, {
+            throwOnError: false,
+            displayMode: host.dataset.display === '1',
+          });
+        } catch (e) {
+          host.textContent = src;
+        }
+      });
+    });
+  })();
+</script>

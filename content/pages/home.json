@@ -1,0 +1,34 @@
+{
+  "title": "Home",
+  "description": "",
+  "pubDate": "2026-05-05",
+  "draft": false,
+  "showInNav": false,
+  "navLabel": "Home",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Hey, I'm iruki",
+      "align": "left"
+    },
+    {
+      "type": "paragraph",
+      "text": "Developer. This is my personal corner of the internet — blog, projects, and whatever else I feel like putting here.",
+      "align": "left"
+    },
+    {
+      "type": "recent-posts",
+      "title": "Posts",
+      "limit": 3,
+      "showAllLink": true
+    },
+    {
+      "type": "featured-projects",
+      "title": "Projects",
+      "limit": 3,
+      "featuredOnly": true,
+      "showAllLink": true
+    }
+  ]
+}

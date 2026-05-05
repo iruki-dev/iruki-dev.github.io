@@ -1,0 +1,56 @@
+---
+const { block } = Astro.props as { block: any };
+const items = block.items || [];
+---
+<div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stats-host">
+  {items.map((it: any) => (
+    <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-5 bg-zinc-50/60 dark:bg-zinc-900/40 text-center">
+      <div class="text-3xl font-bold text-accent-600 dark:text-accent-400">
+        <span>{it.prefix || ''}</span>
+        <span
+          class="stat-value"
+          data-target={it.value}
+          data-animate={it.animate !== false ? '1' : '0'}
+        >{it.value}</span>
+        <span>{it.suffix || ''}</span>
+      </div>
+      <div class="mt-1 text-sm uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{it.label}</div>
+    </div>
+  ))}
+</div>
+
+<script is:inline>
+  (function(){
+    function animateValue(el, target){
+      const numMatch = String(target).match(/-?\d[\d,]*(\.\d+)?/);
+      if (!numMatch) { el.textContent = target; return; }
+      const raw = numMatch[0].replace(/,/g, '');
+      const final = parseFloat(raw);
+      const decimals = (raw.split('.')[1] || '').length;
+      const prefix = String(target).slice(0, numMatch.index);
+      const suffix = String(target).slice(numMatch.index + numMatch[0].length);
+      const useCommas = numMatch[0].includes(',');
+      const dur = 900;
+      const start = performance.now();
+      function tick(now){
+        const t = Math.min(1, (now - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = final * eased;
+        const fixed = decimals ? v.toFixed(decimals) : Math.round(v).toString();
+        el.textContent = prefix + (useCommas ? Number(fixed).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : fixed) + suffix;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        if (el.dataset.animated) return;
+        el.dataset.animated = '1';
+        if (el.dataset.animate === '1') animateValue(el, el.dataset.target);
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll('.stat-value').forEach((el) => obs.observe(el));
+  })();
+</script>

@@ -1,0 +1,16 @@
+---
+import { renderBlockMd } from './_md';
+const { block } = Astro.props as { block: any };
+const items = block.items || [];
+---
+<div class="mb-6 rounded-lg border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800 overflow-hidden">
+  {items.map((it: any) => (
+    <details class="group" open={it.open || undefined}>
+      <summary class="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-900/40 hover:bg-zinc-100 dark:hover:bg-zinc-900 select-none">
+        <span class="font-medium text-zinc-800 dark:text-zinc-100">{it.summary || '(untitled)'}</span>
+        <svg class="w-4 h-4 text-zinc-500 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="px-4 py-3 leading-relaxed text-zinc-700 dark:text-zinc-300 [&_p]:mb-3 [&_p:last-child]:mb-0" set:html={renderBlockMd(it.content)} />
+    </details>
+  ))}
+</div>

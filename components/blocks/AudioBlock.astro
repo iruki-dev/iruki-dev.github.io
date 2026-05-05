@@ -1,0 +1,12 @@
+---
+const { block } = Astro.props as { block: any };
+---
+<figure class="mb-6 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40">
+  {block.title && <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">{block.title}</div>}
+  {block.src ? (
+    <audio class="w-full" controls src={block.src} preload="metadata" />
+  ) : (
+    <div class="text-sm text-zinc-500 dark:text-zinc-400">No audio source</div>
+  )}
+  {block.caption && <figcaption class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{block.caption}</figcaption>}
+</figure>

@@ -1,0 +1,28 @@
+---
+import { resolveEmbedUrl } from './_md';
+const { block } = Astro.props as { block: any };
+
+const aspectMap: Record<string, string> = {
+  '16x9': '16/9', '4x3': '4/3', '1x1': '1/1', '9x16': '9/16',
+};
+const aspect = aspectMap[block.aspect] || '16/9';
+const url = resolveEmbedUrl(block.url);
+---
+<figure class="mb-6">
+  {url ? (
+    <div class="relative w-full overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800" style={`aspect-ratio:${aspect}`}>
+      <iframe
+        class="absolute inset-0 w-full h-full"
+        src={url}
+        title={block.title || 'Embedded content'}
+        loading="lazy"
+        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; clipboard-write"
+        allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+      />
+    </div>
+  ) : (
+    <div class="rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 text-sm py-8 text-center">No embed URL</div>
+  )}
+  {block.title && <figcaption class="mt-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">{block.title}</figcaption>}
+</figure>

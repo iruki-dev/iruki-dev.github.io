@@ -1,0 +1,24 @@
+---
+import { renderBlockMd } from './_md';
+const { block } = Astro.props as { block: any };
+
+const variants: Record<string, { wrap: string; icon: string }> = {
+  info:    { wrap: 'border-sky-300/60 bg-sky-50 text-sky-900 dark:border-sky-700/60 dark:bg-sky-950/40 dark:text-sky-100',         icon: 'ℹ' },
+  tip:     { wrap: 'border-emerald-300/60 bg-emerald-50 text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-100', icon: '💡' },
+  warning: { wrap: 'border-amber-300/60 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100',  icon: '⚠' },
+  danger:  { wrap: 'border-rose-300/60 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-100',         icon: '⛔' },
+  note:    { wrap: 'border-zinc-300/60 bg-zinc-50 text-zinc-900 dark:border-zinc-700/60 dark:bg-zinc-900/60 dark:text-zinc-100',          icon: '📝' },
+  success: { wrap: 'border-green-300/60 bg-green-50 text-green-900 dark:border-green-700/60 dark:bg-green-950/40 dark:text-green-100',     icon: '✅' },
+};
+const v = variants[block.variant] ?? variants.info;
+const icon = block.icon || v.icon;
+---
+<aside class={`mb-6 border-l-4 rounded-r-md px-4 py-3 ${v.wrap}`}>
+  <div class="flex items-start gap-3">
+    <div class="text-xl leading-none mt-0.5" aria-hidden="true">{icon}</div>
+    <div class="flex-1 min-w-0">
+      {block.title && <div class="font-semibold mb-1">{block.title}</div>}
+      <div class="leading-relaxed [&_p]:mb-2 [&_p:last-child]:mb-0" set:html={renderBlockMd(block.text)} />
+    </div>
+  </div>
+</aside>

@@ -1,0 +1,39 @@
+---
+const { block } = Astro.props as { block: any };
+const colors = (block.colors || []).filter((c: any) => c?.hex);
+---
+<div class="mb-6">
+  {block.label && <div class="text-sm uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">{block.label}</div>}
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 palette-host">
+    {colors.map((c: any) => (
+      <button
+        type="button"
+        class="group rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:scale-[1.02] transition-transform text-left"
+        data-hex={c.hex}
+        title={`Click to copy ${c.hex}`}
+      >
+        <div class="h-14" style={`background:${c.hex}`}></div>
+        <div class="px-2 py-1.5 bg-white dark:bg-zinc-950">
+          <div class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{c.name || c.hex}</div>
+          <div class="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-500 font-mono">{c.hex}</div>
+        </div>
+      </button>
+    ))}
+  </div>
+</div>
+
+<script is:inline>
+  (function(){
+    document.querySelectorAll('.palette-host [data-hex]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        const hex = b.dataset.hex;
+        try {
+          await navigator.clipboard.writeText(hex);
+          const orig = b.title;
+          b.title = 'Copied!';
+          setTimeout(() => { b.title = orig; }, 1200);
+        } catch(_) {}
+      });
+    });
+  })();
+</script>

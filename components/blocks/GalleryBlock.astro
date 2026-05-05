@@ -1,0 +1,57 @@
+---
+const { block } = Astro.props as { block: any };
+const cols = Math.min(6, Math.max(1, block.columns ?? 3));
+const colsClass: Record<number, string> = {
+  1: 'sm:grid-cols-1',
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+  5: 'sm:grid-cols-5',
+  6: 'sm:grid-cols-6',
+};
+const items = (block.items || []).filter((i: any) => i?.src);
+---
+<div class={`mb-6 grid grid-cols-2 ${colsClass[cols]} gap-2 gallery-host`}>
+  {items.map((it: any, i: number) => (
+    <button
+      type="button"
+      class="group relative overflow-hidden rounded-md aspect-square bg-zinc-100 dark:bg-zinc-900"
+      data-gallery-i={i}
+      data-src={it.src}
+      data-alt={it.alt || ''}
+      data-cap={it.caption || ''}
+      aria-label={it.alt || `Image ${i + 1}`}
+    >
+      <img src={it.src} alt={it.alt || ''} loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+    </button>
+  ))}
+</div>
+
+<script is:inline>
+  (function(){
+    const hosts = document.querySelectorAll('.gallery-host');
+    if (!hosts.length) return;
+    let lb = document.getElementById('gallery-lightbox');
+    if (!lb) {
+      lb = document.createElement('div');
+      lb.id = 'gallery-lightbox';
+      lb.style.cssText = 'position:fixed;inset:0;z-index:100;display:none;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:24px;cursor:zoom-out';
+      lb.innerHTML = '<figure style="max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;gap:8px"><img id="gl-img" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:6px" /><figcaption id="gl-cap" style="color:#e5e5e5;font-size:14px"></figcaption></figure>';
+      document.body.appendChild(lb);
+      lb.addEventListener('click', () => lb.style.display = 'none');
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lb.style.display = 'none'; });
+    }
+    hosts.forEach((host) => {
+      host.querySelectorAll('[data-gallery-i]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const img = lb.querySelector('#gl-img');
+          const cap = lb.querySelector('#gl-cap');
+          img.src = btn.dataset.src;
+          img.alt = btn.dataset.alt || '';
+          cap.textContent = btn.dataset.cap || '';
+          lb.style.display = 'flex';
+        });
+      });
+    });
+  })();
+</script>

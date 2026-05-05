@@ -1,0 +1,21 @@
+{
+  "title": "Blog",
+  "description": "All posts!",
+  "pubDate": "2026-05-04",
+  "draft": false,
+  "showInNav": true,
+  "navLabel": "Blog",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Blog"
+    },
+    {
+      "type": "recent-posts",
+      "title": "All posts!!",
+      "limit": 0,
+      "showAllLink": false
+    }
+  ]
+}

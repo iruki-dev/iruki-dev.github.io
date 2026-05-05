@@ -1,4 +1,26 @@
 ---
+import { renderInline, renderBlockMd } from './_md';
+import CalloutBlock from './CalloutBlock.astro';
+import QuoteBlock from './QuoteBlock.astro';
+import VideoBlock from './VideoBlock.astro';
+import AudioBlock from './AudioBlock.astro';
+import EmbedBlock from './EmbedBlock.astro';
+import GalleryBlock from './GalleryBlock.astro';
+import AccordionBlock from './AccordionBlock.astro';
+import TabsBlock from './TabsBlock.astro';
+import StatsBlock from './StatsBlock.astro';
+import TimelineBlock from './TimelineBlock.astro';
+import ProgressBlock from './ProgressBlock.astro';
+import CountdownBlock from './CountdownBlock.astro';
+import MermaidBlock from './MermaidBlock.astro';
+import MathBlock from './MathBlock.astro';
+import RunnerBlock from './RunnerBlock.astro';
+import MarqueeBlock from './MarqueeBlock.astro';
+import PaletteShowcaseBlock from './PaletteShowcaseBlock.astro';
+import IframeSandboxBlock from './IframeSandboxBlock.astro';
+import RecentPostsBlock from './RecentPostsBlock.astro';
+import FeaturedProjectsBlock from './FeaturedProjectsBlock.astro';
+
 interface Props {
   block: any;
 }
@@ -20,30 +42,6 @@ const buttonClass = (s?: string) =>
     : s === 'ghost'
     ? 'text-accent-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-accent-400'
     : 'bg-accent-500 hover:bg-accent-600 text-white';
-
-const escHtml = (s: string) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-// Tiny inline markdown: **bold**, *italic*, `code`, [text](url), <br>
-function renderInline(txt: string) {
-  if (!txt) return '';
-  let out = escHtml(txt);
-  out = out.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-sm">$1</code>');
-  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-accent-500 dark:text-accent-400 hover:underline">$1</a>');
-  out = out.replace(/\n/g, '<br />');
-  return out;
-}
-
-// Tiny block markdown for columns: paragraphs separated by blank lines, plus inline.
-function renderBlockMd(txt: string) {
-  if (!txt) return '';
-  return txt
-    .split(/\n{2,}/)
-    .map((p) => `<p>${renderInline(p.trim())}</p>`)
-    .join('');
-}
 ---
 
 {block.type === 'heading' && (
@@ -143,3 +141,24 @@ function renderBlockMd(txt: string) {
     ))}
   </div>
 )}
+
+{block.type === 'callout'  && <CalloutBlock  block={block} />}
+{block.type === 'quote'    && <QuoteBlock    block={block} />}
+{block.type === 'video'    && <VideoBlock    block={block} />}
+{block.type === 'audio'    && <AudioBlock    block={block} />}
+{block.type === 'embed'    && <EmbedBlock    block={block} />}
+{block.type === 'gallery'  && <GalleryBlock  block={block} />}
+{block.type === 'accordion'&& <AccordionBlock block={block} />}
+{block.type === 'tabs'     && <TabsBlock     block={block} />}
+{block.type === 'stats'    && <StatsBlock    block={block} />}
+{block.type === 'timeline' && <TimelineBlock block={block} />}
+{block.type === 'progress' && <ProgressBlock block={block} />}
+{block.type === 'countdown'&& <CountdownBlock block={block} />}
+{block.type === 'mermaid'  && <MermaidBlock  block={block} />}
+{block.type === 'math'     && <MathBlock     block={block} />}
+{block.type === 'runner'   && <RunnerBlock   block={block} />}
+{block.type === 'marquee'  && <MarqueeBlock  block={block} />}
+{block.type === 'palette'  && <PaletteShowcaseBlock block={block} />}
+{block.type === 'iframe-sandbox' && <IframeSandboxBlock block={block} />}
+{block.type === 'recent-posts'      && <RecentPostsBlock block={block} />}
+{block.type === 'featured-projects' && <FeaturedProjectsBlock block={block} />}
