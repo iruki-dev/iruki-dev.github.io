@@ -7,9 +7,17 @@ interface Props {
   pubDate: Date;
   updatedDate?: Date;
   tags?: string[];
+  github?: string;
+  demo?: string;
+  collection: string;
+  collectionLabel: string;
 }
 
-const { title, description, pubDate, updatedDate, tags = [] } = Astro.props;
+const {
+  title, description, pubDate, updatedDate,
+  tags = [], github, demo,
+  collection, collectionLabel,
+} = Astro.props;
 
 const pubDateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 const updatedDateStr = updatedDate?.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -22,11 +30,20 @@ const updatedDateStr = updatedDate?.toLocaleDateString('en-US', { year: 'numeric
         {tags.map(tag => <span class="tag">{tag}</span>)}
       </div>
       <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{title}</h1>
-      <p class="mt-2 text-zinc-500 dark:text-zinc-400">{description}</p>
-      <div class="mt-4 text-sm text-zinc-400 dark:text-zinc-600">
+      {description && (
+        <p class="mt-2 text-zinc-500 dark:text-zinc-400">{description}</p>
+      )}
+      <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400 dark:text-zinc-600">
         <time datetime={pubDate.toISOString()}>Published {pubDateStr}</time>
         {updatedDate && (
-          <span> · Updated <time datetime={updatedDate.toISOString()}>{updatedDateStr}</time></span>
+          <span>· Updated <time datetime={updatedDate.toISOString()}>{updatedDateStr}</time></span>
+        )}
+        {(github || demo) && <span>·</span>}
+        {github && (
+          <a href={github} target="_blank" rel="noopener noreferrer" class="link">GitHub ↗</a>
+        )}
+        {demo && (
+          <a href={demo} target="_blank" rel="noopener noreferrer" class="link">Live demo ↗</a>
         )}
       </div>
     </header>
@@ -42,6 +59,6 @@ const updatedDateStr = updatedDate?.toLocaleDateString('en-US', { year: 'numeric
     </div>
   </article>
   <div class="mt-12 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-    <a href="/blog" class="text-sm text-accent-500 dark:text-accent-400 hover:underline">← All posts</a>
+    <a href={`/${collection}`} class="text-sm text-accent-500 dark:text-accent-400 hover:underline">← All {collectionLabel.toLowerCase()}</a>
   </div>
 </BaseLayout>

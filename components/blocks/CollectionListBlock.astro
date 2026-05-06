@@ -1,0 +1,61 @@
+---
+import { getCollection } from 'astro:content';
+import CollectionItemCard from '../CollectionItemCard.astro';
+import { COLLECTIONS, COLLECTION_NAMES } from '../../config';
+
+const { block } = Astro.props as { block: any };
+
+const name: string = block.collection || '';
+const limitRaw = Number(block.limit);
+const limit = Number.isFinite(limitRaw) ? limitRaw : 3;
+const featuredOnly = !!block.featuredOnly;
+
+const def = COLLECTIONS.find((c) => c.name === name);
+const valid = COLLECTION_NAMES.includes(name);
+
+const all = valid
+  ? (await getCollection(name as any, ({ data }: any) => !data.draft))
+      .filter((item: any) => (featuredOnly ? item.data.featured : true))
+      .sort((a: any, b: any) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  : [];
+
+const items = limit > 0 ? all.slice(0, limit) : all;
+const titleText = block.title || (def?.label ?? 'Items');
+---
+
+{!valid && (
+  <section class="mb-10 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-800 dark:text-amber-200">
+    Collection <code class="font-mono">{name || '(none)'}</code> is not defined.
+    Add it in the admin <strong>Collections</strong> section, or pick an existing one:
+    {COLLECTION_NAMES.length > 0 && (
+      <span> {COLLECTION_NAMES.map((n) => <code class="mx-1 font-mono">{n}</code>)}</span>
+    )}
+  </section>
+)}
+
+{valid && items.length > 0 && (
+  <section class="mb-10">
+    <div class="flex items-baseline justify-between mb-1">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+        {titleText}
+      </h2>
+      {block.showAllLink !== false && limit > 0 && limit < all.length && (
+        <a href={`/${name}`} class="text-sm link">All {def?.label?.toLowerCase() || name} →</a>
+      )}
+    </div>
+    <div>
+      {items.map((item: any) => (
+        <CollectionItemCard
+          title={item.data.title}
+          description={item.data.description}
+          pubDate={item.data.pubDate}
+          collection={name}
+          slug={item.slug}
+          tags={item.data.tags}
+          github={item.data.github}
+          demo={item.data.demo}
+        />
+      ))}
+    </div>
+  </section>
+)}

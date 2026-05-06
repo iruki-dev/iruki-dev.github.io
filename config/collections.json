@@ -1,0 +1,16 @@
+{
+  "collections": [
+    {
+      "name": "blog",
+      "label": "Blog",
+      "labelOne": "Post",
+      "icon": "✎"
+    },
+    {
+      "name": "projects",
+      "label": "Projects",
+      "labelOne": "Project",
+      "icon": "◫"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+---
+import { getCollection } from 'astro:content';
+import CollectionPost from '../../layouts/CollectionPost.astro';
+import { COLLECTIONS } from '../../config';
+
+export async function getStaticPaths() {
+  const paths: any[] = [];
+  for (const def of COLLECTIONS) {
+    const items = await getCollection(def.name as any, ({ data }: any) => !data.draft);
+    for (const item of items) {
+      paths.push({
+        params: { collection: def.name, slug: (item as any).slug },
+        props: { item, def },
+      });
+    }
+  }
+  return paths;
+}
+
+const { item, def } = Astro.props as { item: any; def: any };
+const { Content } = await item.render();
+---
+
+<CollectionPost
+  title={item.data.title}
+  description={item.data.description}
+  pubDate={item.data.pubDate}
+  updatedDate={item.data.updatedDate}
+  tags={item.data.tags}
+  github={item.data.github}
+  demo={item.data.demo}
+  collection={def.name}
+  collectionLabel={def.label}
+>
+  <Content />
+</CollectionPost>

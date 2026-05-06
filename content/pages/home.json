@@ -18,13 +18,15 @@
       "align": "left"
     },
     {
-      "type": "recent-posts",
+      "type": "collection-list",
+      "collection": "blog",
       "title": "Posts",
       "limit": 3,
       "showAllLink": true
     },
     {
-      "type": "featured-projects",
+      "type": "collection-list",
+      "collection": "projects",
       "title": "Projects",
       "limit": 3,
       "featuredOnly": true,

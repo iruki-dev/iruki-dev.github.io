@@ -21,19 +21,24 @@ import {
   existsSync,
   mkdirSync,
   statSync,
+  renameSync,
+  rmdirSync,
 } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIRS = {
-  blog: join(ROOT, 'content', 'blog'),
-  projects: join(ROOT, 'content', 'projects'),
+  content: join(ROOT, 'content'),
   pages: join(ROOT, 'content', 'pages'),
   config: join(ROOT, 'config'),
   uploads: join(ROOT, 'public', 'uploads'),
 };
+const COLLECTIONS_FILE = 'collections.json';
 const PORT = 4000;
+const RESERVED_NAMES = new Set(['pages', 'config']);
+
+const collectionDir = (name) => join(DIRS.content, name);
 
 // ── Frontmatter (markdown) ───────────────────────────────────
 function parseFM(raw) {
@@ -74,9 +79,9 @@ function buildFM(data, body) {
   return lines.join('\n');
 }
 
-// ── Markdown content (blog/projects) ─────────────────────────
-function listMd(type) {
-  const dir = DIRS[type];
+// ── Markdown content (any collection) ────────────────────────
+function listMd(collection) {
+  const dir = collectionDir(collection);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter(f => /\.mdx?$/.test(f))
@@ -88,21 +93,54 @@ function listMd(type) {
     .sort((a, b) => (b.pubDate || '').localeCompare(a.pubDate || ''));
 }
 
-function getMd(type, slug) {
-  const filePath = join(DIRS[type], `${slug}.md`);
+function getMd(collection, slug) {
+  const filePath = join(collectionDir(collection), `${slug}.md`);
   if (!existsSync(filePath)) return null;
   const { data, body } = parseFM(readFileSync(filePath, 'utf8'));
   return { slug, data, body };
 }
 
-function saveMd(type, slug, data, body) {
-  mkdirSync(DIRS[type], { recursive: true });
-  writeFileSync(join(DIRS[type], `${slug}.md`), buildFM(data, body), 'utf8');
+function saveMd(collection, slug, data, body) {
+  mkdirSync(collectionDir(collection), { recursive: true });
+  writeFileSync(join(collectionDir(collection), `${slug}.md`), buildFM(data, body), 'utf8');
 }
 
-function deleteMd(type, slug) {
-  const filePath = join(DIRS[type], `${slug}.md`);
+function deleteMd(collection, slug) {
+  const filePath = join(collectionDir(collection), `${slug}.md`);
   if (existsSync(filePath)) unlinkSync(filePath);
+}
+
+// ── Collection definitions (config/collections.json) ─────────
+function readCollections() {
+  const p = join(DIRS.config, COLLECTIONS_FILE);
+  if (!existsSync(p)) return [];
+  try {
+    const j = JSON.parse(readFileSync(p, 'utf8'));
+    return Array.isArray(j.collections) ? j.collections : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCollections(list) {
+  mkdirSync(DIRS.config, { recursive: true });
+  writeFileSync(
+    join(DIRS.config, COLLECTIONS_FILE),
+    JSON.stringify({ collections: list }, null, 2) + '\n',
+    'utf8'
+  );
+}
+
+function listCollectionsWithStats() {
+  return readCollections().map((c) => {
+    const items = listMd(c.name);
+    return {
+      ...c,
+      total: items.length,
+      drafts: items.filter((i) => i.draft).length,
+      featured: items.filter((i) => i.featured).length,
+    };
+  });
 }
 
 // ── Pages (JSON, block-based) ────────────────────────────────
@@ -259,10 +297,90 @@ const server = createServer(async (req, res) => {
   }
 
   try {
-    // Markdown content (blog, projects)
-    const mdMatch = path.match(/^\/api\/(blog|projects)(?:\/([^/]+))?$/);
+    // Collections registry (config/collections.json)
+    const collMatch = path.match(/^\/api\/collections(?:\/([^/]+))?$/);
+    if (collMatch) {
+      const [, name] = collMatch;
+      const all = readCollections();
+
+      if (method === 'GET' && !name) return json(res, listCollectionsWithStats());
+      if (method === 'GET' && name) {
+        const c = all.find((x) => x.name === name);
+        return c ? json(res, c) : json(res, { error: 'Not found' }, 404);
+      }
+      if (method === 'POST' && !name) {
+        const body = await readBody(req);
+        const newName = String(body.name || '').trim();
+        if (!slugRe.test(newName))
+          return json(res, { error: 'Invalid name. Use lowercase letters, numbers, dashes.' }, 400);
+        if (RESERVED_NAMES.has(newName))
+          return json(res, { error: `"${newName}" is reserved.` }, 400);
+        if (all.some((c) => c.name === newName))
+          return json(res, { error: `Collection "${newName}" already exists.` }, 400);
+        const def = {
+          name: newName,
+          label: String(body.label || newName).trim() || newName,
+          labelOne: String(body.labelOne || newName).trim() || newName,
+          icon: String(body.icon || '◫').trim() || '◫',
+        };
+        writeCollections([...all, def]);
+        mkdirSync(collectionDir(newName), { recursive: true });
+        return json(res, { ok: true, collection: def });
+      }
+      if (method === 'PUT' && name) {
+        const body = await readBody(req);
+        const idx = all.findIndex((c) => c.name === name);
+        if (idx < 0) return json(res, { error: 'Not found' }, 404);
+        const updated = { ...all[idx] };
+        if (typeof body.label === 'string') updated.label = body.label.trim() || name;
+        if (typeof body.labelOne === 'string') updated.labelOne = body.labelOne.trim() || name;
+        if (typeof body.icon === 'string') updated.icon = body.icon.trim() || '◫';
+        // Rename: change name field + move directory.
+        if (typeof body.name === 'string' && body.name !== name) {
+          const nn = body.name.trim();
+          if (!slugRe.test(nn))
+            return json(res, { error: 'Invalid name. Use lowercase letters, numbers, dashes.' }, 400);
+          if (RESERVED_NAMES.has(nn))
+            return json(res, { error: `"${nn}" is reserved.` }, 400);
+          if (all.some((c, i) => i !== idx && c.name === nn))
+            return json(res, { error: `Collection "${nn}" already exists.` }, 400);
+          const oldDir = collectionDir(name);
+          const newDir = collectionDir(nn);
+          if (existsSync(oldDir) && !existsSync(newDir)) {
+            renameSync(oldDir, newDir);
+          } else if (!existsSync(newDir)) {
+            mkdirSync(newDir, { recursive: true });
+          }
+          updated.name = nn;
+        }
+        const next = [...all];
+        next[idx] = updated;
+        writeCollections(next);
+        return json(res, { ok: true, collection: updated });
+      }
+      if (method === 'DELETE' && name) {
+        const url2 = new URL(req.url, `http://localhost:${PORT}`);
+        const wipe = url2.searchParams.get('wipe') === '1';
+        const next = all.filter((c) => c.name !== name);
+        if (next.length === all.length) return json(res, { error: 'Not found' }, 404);
+        writeCollections(next);
+        if (wipe) {
+          const dir = collectionDir(name);
+          if (existsSync(dir) && dir.startsWith(DIRS.content)) {
+            for (const f of readdirSync(dir)) unlinkSync(join(dir, f));
+            try { rmdirSync(dir); } catch {}
+          }
+        }
+        return json(res, { ok: true });
+      }
+    }
+
+    // Items inside any collection: /api/items/<collection>[/<slug>]
+    const mdMatch = path.match(/^\/api\/items\/([^/]+)(?:\/([^/]+))?$/);
     if (mdMatch) {
       const [, type, slug] = mdMatch;
+      const known = readCollections().some((c) => c.name === type);
+      if (!known) return json(res, { error: `Unknown collection "${type}"` }, 404);
       if (method === 'GET' && !slug) return json(res, listMd(type));
       if (method === 'GET' && slug) {
         const item = getMd(type, slug);
@@ -348,12 +466,10 @@ const server = createServer(async (req, res) => {
 
     // Stats for dashboard
     if (path === '/api/stats' && method === 'GET') {
-      const blog = listMd('blog');
-      const projects = listMd('projects');
+      const collections = listCollectionsWithStats();
       const pages = listPages();
       return json(res, {
-        blog: { total: blog.length, drafts: blog.filter(b => b.draft).length },
-        projects: { total: projects.length, drafts: projects.filter(p => p.draft).length, featured: projects.filter(p => p.featured).length },
+        collections,
         pages: { total: pages.length, drafts: pages.filter(p => p.draft).length },
         media: { total: listMedia().length },
       });
@@ -655,7 +771,24 @@ const API = {
   del: (t,s) => fetch('/api/'+t+'/'+s, {method:'DELETE'}).then(r=>r.json()),
   putRaw: (t,b) => fetch('/api/'+t,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json()),
   stats: () => fetch('/api/stats').then(r=>r.json()),
+  // Collection items
+  itemsList: c => fetch('/api/items/'+c).then(r=>r.json()),
+  itemGet:   (c,s) => fetch('/api/items/'+c+'/'+s).then(r=>r.json()),
+  itemSave:  (c,s,body) => fetch('/api/items/'+c+'/'+(s||''), {method:s?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()),
+  itemDel:   (c,s) => fetch('/api/items/'+c+'/'+s, {method:'DELETE'}).then(r=>r.json()),
+  // Collection definitions
+  collections: () => fetch('/api/collections').then(r=>r.json()),
+  collCreate: body => fetch('/api/collections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()),
+  collUpdate: (n,body) => fetch('/api/collections/'+n,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()),
+  collDelete: (n,wipe) => fetch('/api/collections/'+n+(wipe?'?wipe=1':''),{method:'DELETE'}).then(r=>r.json()),
 };
+
+let COLLECTIONS_CACHE = [];
+async function refreshCollectionsCache(){
+  try { COLLECTIONS_CACHE = await API.collections(); } catch { COLLECTIONS_CACHE = []; }
+  return COLLECTIONS_CACHE;
+}
+const collectionDef = (name) => COLLECTIONS_CACHE.find(c => c.name === name);
 
 // ─── Inline markdown preview (matches PageBlock.astro) ───
 function renderInlineMd(t){
@@ -806,44 +939,84 @@ async function openMediaPicker(onPick){
 }
 
 // ─── Sidebar / routing ───
-const ROUTES = {
-  dashboard: { icon:'⊞', label:'Dashboard', section:'Overview' },
-  posts:     { icon:'✎', label:'Posts',      section:'Content' },
-  projects:  { icon:'◫', label:'Projects',   section:'Content' },
-  pages:     { icon:'▣', label:'Pages',      section:'Site builder' },
-  site:      { icon:'⚙', label:'Site',       section:'Site builder' },
-  media:     { icon:'◧', label:'Media',      section:'Site builder' },
+// Static routes (not bound to a collection).
+const STATIC_ROUTES = {
+  dashboard:   { icon:'⊞', label:'Dashboard',          section:'Overview' },
+  collections: { icon:'⛁', label:'Manage collections', section:'Site builder' },
+  pages:       { icon:'▣', label:'Pages',              section:'Site builder' },
+  site:        { icon:'⚙', label:'Site',               section:'Site builder' },
+  media:       { icon:'◧', label:'Media',              section:'Site builder' },
 };
 
 let currentRoute = 'dashboard';
 let currentParams = {};
 
 function renderMenu(stats={}){
-  const sections = {};
-  for (const [k,v] of Object.entries(ROUTES)){
-    if (!sections[v.section]) sections[v.section] = [];
-    let count = '';
-    if (k==='posts') count = stats.blog?.total ?? '';
-    else if (k==='projects') count = stats.projects?.total ?? '';
-    else if (k==='pages') count = stats.pages?.total ?? '';
-    else if (k==='media') count = stats.media?.total ?? '';
-    sections[v.section].push({ key:k, ...v, count });
+  const collections = COLLECTIONS_CACHE || [];
+  const sections = { Overview: [], Content: [], 'Site builder': [] };
+
+  // Dashboard
+  sections.Overview.push({
+    key: 'dashboard',
+    isItems: false,
+    icon: STATIC_ROUTES.dashboard.icon,
+    label: STATIC_ROUTES.dashboard.label,
+    count: '',
+    active: currentRoute === 'dashboard',
+  });
+
+  // One menu entry per collection
+  for (const c of collections){
+    const stat = (stats.collections || []).find(s => s.name === c.name);
+    sections.Content.push({
+      key: 'items:' + c.name,
+      isItems: true,
+      collection: c.name,
+      icon: c.icon || '◫',
+      label: c.label || c.name,
+      count: stat?.total ?? '',
+      active: currentRoute === 'items' && currentParams.collection === c.name,
+    });
   }
-  const html = Object.entries(sections).map(([sec, items]) =>
-    '<div class="menu-section">'+esc(sec)+'</div>'
-    + items.map(i =>
-      '<button class="menu-item'+(currentRoute===i.key?' active':'')+'" data-route="'+i.key+'">'
-      + '<span class="ico">'+i.icon+'</span>'
-      + '<span>'+esc(i.label)+'</span>'
-      + (i.count!==''&&i.count!=null?'<span class="count">'+i.count+'</span>':'')
-      + '</button>'
-    ).join('')
-  ).join('');
+
+  // Site builder
+  for (const k of ['pages','collections','site','media']){
+    const v = STATIC_ROUTES[k];
+    let count = '';
+    if (k==='pages') count = stats.pages?.total ?? '';
+    else if (k==='media') count = stats.media?.total ?? '';
+    else if (k==='collections') count = collections.length || '';
+    sections['Site builder'].push({
+      key: k,
+      isItems: false,
+      icon: v.icon, label: v.label, count,
+      active: currentRoute === k,
+    });
+  }
+
+  const sectionOrder = ['Overview','Content','Site builder'];
+  const html = sectionOrder.map(sec => {
+    const items = sections[sec];
+    if (!items.length) return '';
+    return '<div class="menu-section">'+esc(sec)+'</div>'
+      + items.map(i =>
+        '<button class="menu-item'+(i.active?' active':'')+'" data-route="'+i.key+'">'
+        + '<span class="ico">'+esc(i.icon)+'</span>'
+        + '<span>'+esc(i.label)+'</span>'
+        + (i.count!==''&&i.count!=null?'<span class="count">'+i.count+'</span>':'')
+        + '</button>'
+      ).join('');
+  }).join('');
   $('#menu').innerHTML = html;
-  $('#menu').querySelectorAll('[data-route]').forEach(b => b.onclick = () => navigate(b.dataset.route));
+  $('#menu').querySelectorAll('[data-route]').forEach(b => b.onclick = () => {
+    const k = b.dataset.route;
+    if (k.startsWith('items:')) navigate('items', { collection: k.slice('items:'.length) });
+    else navigate(k);
+  });
 }
 
 async function refreshMenu(){
+  await refreshCollectionsCache();
   try { renderMenu(await API.stats()); } catch { renderMenu({}); }
 }
 
@@ -869,41 +1042,54 @@ async function renderDashboard(){
   setTopbar({crumbs:'<strong style="color:var(--text)">Dashboard</strong>'});
   setContent('<div class="loading">Loading…</div>');
   const s = await API.stats();
+  const collStats = s.collections || [];
+  const collTiles = collStats.map(c => \`
+    <div class="stat">
+      <div class="stat-num">\${c.total ?? 0}</div>
+      <div class="stat-label">\${esc(c.label || c.name)}</div>
+      <div class="stat-sub">\${c.drafts ?? 0} drafts\${c.featured ? ' · '+c.featured+' featured':''}</div>
+    </div>\`).join('');
+  const quickNew = collStats.map(c => \`<button class="btn btn-secondary" data-newcoll="\${esc(c.name)}">+ New \${esc(c.labelOne || c.name)}</button>\`).join('');
   setContent(\`
     <div class="stat-grid">
-      <div class="stat"><div class="stat-num">\${s.blog?.total ?? 0}</div><div class="stat-label">Posts</div><div class="stat-sub">\${s.blog?.drafts ?? 0} drafts</div></div>
-      <div class="stat"><div class="stat-num">\${s.projects?.total ?? 0}</div><div class="stat-label">Projects</div><div class="stat-sub">\${s.projects?.featured ?? 0} featured · \${s.projects?.drafts ?? 0} drafts</div></div>
+      \${collTiles}
       <div class="stat"><div class="stat-num">\${s.pages?.total ?? 0}</div><div class="stat-label">Pages</div><div class="stat-sub">\${s.pages?.drafts ?? 0} drafts</div></div>
       <div class="stat"><div class="stat-num">\${s.media?.total ?? 0}</div><div class="stat-label">Media files</div><div class="stat-sub">in /public/uploads</div></div>
     </div>
     <div class="card">
       <h2 style="font-size:14px;font-weight:600;margin-bottom:10px">Quick actions</h2>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <button class="btn btn-primary" data-act="new-post">+ New post</button>
-        <button class="btn btn-secondary" data-act="new-project">+ New project</button>
+        \${quickNew}
         <button class="btn btn-secondary" data-act="new-page">+ New page</button>
+        <button class="btn btn-outline" data-act="manage-coll">Manage collections</button>
         <button class="btn btn-outline" data-act="open-media">Media library</button>
         <button class="btn btn-outline" data-act="open-site">Site settings</button>
       </div>
     </div>
   \`);
-  $('#content').querySelector('[data-act="new-post"]').onclick = () => navigate('posts',{edit:''});
-  $('#content').querySelector('[data-act="new-project"]').onclick = () => navigate('projects',{edit:''});
+  $('#content').querySelectorAll('[data-newcoll]').forEach(b => b.onclick = () => navigate('items', { collection: b.dataset.newcoll, edit: '' }));
   $('#content').querySelector('[data-act="new-page"]').onclick = () => navigate('pages',{edit:''});
+  $('#content').querySelector('[data-act="manage-coll"]').onclick = () => navigate('collections');
   $('#content').querySelector('[data-act="open-media"]').onclick = () => navigate('media');
   $('#content').querySelector('[data-act="open-site"]').onclick = () => navigate('site');
 }
 
-// ─── Posts / Projects list + editor ───
-async function renderMdList(type){
-  const labelOne = type==='blog'?'Post':'Project';
-  const label = type==='blog'?'Posts':'Projects';
+// ─── Items list + editor (any collection) ───
+async function renderMdList(collection){
+  const def = collectionDef(collection);
+  if (!def){
+    setContent('<div class="alert error">Unknown collection "'+esc(collection)+'". <a href="javascript:void(0)" id="goto-coll">Manage collections</a>.</div>');
+    $('#goto-coll')?.addEventListener('click', () => navigate('collections'));
+    return;
+  }
+  const labelOne = def.labelOne || collection;
+  const label = def.label || collection;
   setTopbar({
-    crumbs:'<strong style="color:var(--text)">'+label+'</strong>',
-    actions:'<button class="btn btn-primary btn-sm" id="new-md">+ New '+labelOne+'</button>',
+    crumbs:'<strong style="color:var(--text)">'+esc(label)+'</strong>',
+    actions:'<button class="btn btn-primary btn-sm" id="new-md">+ New '+esc(labelOne)+'</button>',
   });
   setContent('<div class="loading">Loading…</div>', true);
-  const items = await API.list(type);
+  const items = await API.itemsList(collection);
   const html = items.length ? \`
     <div class="card card-pad">
       \${items.map(it => \`
@@ -915,7 +1101,7 @@ async function renderMdList(type){
               <span>\${esc(it.pubDate || '—')}</span>
               <span>\${it.words ?? 0} words</span>
               \${it.draft?'<span class="badge draft">draft</span>':'<span class="badge published">published</span>'}
-              \${(type==='projects'&&it.featured)?'<span class="badge featured">featured</span>':''}
+              \${it.featured?'<span class="badge featured">featured</span>':''}
             </div>
           </div>
           <div class="item-actions">
@@ -925,47 +1111,53 @@ async function renderMdList(type){
         </div>
       \`).join('')}
     </div>
-  \` : '<div class="empty"><div class="ico">'+(type==='blog'?'✎':'◫')+'</div>No '+label.toLowerCase()+' yet. Click "+ New '+labelOne+'" to start.</div>';
+  \` : '<div class="empty"><div class="ico">'+esc(def.icon||'◫')+'</div>No '+esc(label.toLowerCase())+' yet. Click "+ New '+esc(labelOne)+'" to start.</div>';
   setContent(html, true);
-  $('#new-md').onclick = () => navigate(type==='blog'?'posts':'projects', {edit:''});
-  $('#content').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => navigate(type==='blog'?'posts':'projects', {edit:b.dataset.edit}));
+  $('#new-md').onclick = () => navigate('items', { collection, edit: '' });
+  $('#content').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => navigate('items', { collection, edit: b.dataset.edit }));
   $('#content').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     const slug = b.dataset.del;
     confirmDelete(slug, async () => {
-      await API.del(type, slug);
+      await API.itemDel(collection, slug);
       toast('Deleted "'+slug+'"');
-      navigate(type==='blog'?'posts':'projects');
+      navigate('items', { collection });
     });
   });
 }
 
-async function renderMdEdit(type, slug){
-  const labelOne = type==='blog'?'Post':'Project';
+async function renderMdEdit(collection, slug){
+  const def = collectionDef(collection);
+  if (!def){
+    setContent('<div class="alert error">Unknown collection "'+esc(collection)+'".</div>');
+    return;
+  }
+  const labelOne = def.labelOne || collection;
+  const label = def.label || collection;
   const isNew = !slug;
   let data = {}, body = '';
   setTopbar({
-    crumbs:'<a href="javascript:void(0)" id="back">'+(type==='blog'?'Posts':'Projects')+'</a> / <strong style="color:var(--text)">'+(isNew?'New '+labelOne:esc(slug))+'</strong>',
+    crumbs:'<a href="javascript:void(0)" id="back">'+esc(label)+'</a> / <strong style="color:var(--text)">'+(isNew?'New '+esc(labelOne):esc(slug))+'</strong>',
     actions:'<span id="dirty-dot"></span><button class="btn btn-outline btn-sm" id="cancel-btn">Cancel</button><button class="btn btn-primary btn-sm" id="save-btn">'+(isNew?'Publish':'Update')+'</button>',
   });
   setContent('<div class="loading">Loading…</div>', true);
 
   if (slug){
-    const r = await API.get(type, slug);
+    const r = await API.itemGet(collection, slug);
     if (r.error) { setContent('<div class="alert error">'+esc(r.error)+'</div>'); return; }
     ({data, body} = r);
   }
-  $('#back').onclick = () => navigate(type==='blog'?'posts':'projects');
-  $('#cancel-btn').onclick = () => navigate(type==='blog'?'posts':'projects');
+  $('#back').onclick = () => navigate('items', { collection });
+  $('#cancel-btn').onclick = () => navigate('items', { collection });
 
   const tagsStr = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '');
-  const projectExtras = type==='projects' ? \`
-    <div class="field-row cols-2">
-      <div class="field"><label>GitHub URL</label><input id="f-github" value="\${esc(data.github||'')}" placeholder="https://github.com/…" /></div>
-      <div class="field"><label>Demo URL</label><input id="f-demo" value="\${esc(data.demo||'')}" placeholder="https://…" /></div>
-    </div>
-    <div class="toggle-row"><label for="f-featured">Featured on home page</label><input type="checkbox" id="f-featured" \${data.featured?'checked':''} /></div>
-  \` : \`
+  // All collections share the same unified schema. Show every optional field; users fill what they need.
+  const projectExtras = \`
     <div class="field"><label>Updated date <span style="color:var(--text3);font-weight:normal">(optional)</span></label><input id="f-updated" type="date" value="\${esc(data.updatedDate||'')}" /></div>
+    <div class="field-row cols-2">
+      <div class="field"><label>GitHub URL <span style="color:var(--text3);font-weight:normal">(optional)</span></label><input id="f-github" value="\${esc(data.github||'')}" placeholder="https://github.com/…" /></div>
+      <div class="field"><label>Demo URL <span style="color:var(--text3);font-weight:normal">(optional)</span></label><input id="f-demo" value="\${esc(data.demo||'')}" placeholder="https://…" /></div>
+    </div>
+    <div class="toggle-row"><label for="f-featured">Featured <span style="color:var(--text3);font-weight:normal">(filterable in collection-list block)</span></label><input type="checkbox" id="f-featured" \${data.featured?'checked':''} /></div>
   \`;
 
   setContent(\`
@@ -1059,21 +1251,19 @@ async function renderMdEdit(type, slug){
       tags,
       draft: $('#f-draft')?.checked ?? false,
     };
-    if (type==='projects'){
-      const gh = g('f-github'), dm = g('f-demo');
-      if (gh) data.github = gh;
-      if (dm) data.demo = dm;
-      data.featured = $('#f-featured')?.checked ?? false;
-    }
+    const gh = g('f-github'), dm = g('f-demo');
+    if (gh) data.github = gh;
+    if (dm) data.demo = dm;
+    if ($('#f-featured')?.checked) data.featured = true;
     const btn = $('#save-btn');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving';
-    const r = await API.save(type, slug || slugVal, { slug: slugVal, data, body: ta.value });
+    const r = await API.itemSave(collection, slug || slugVal, { slug: slugVal, data, body: ta.value });
     btn.disabled = false; btn.textContent = isNew ? 'Publish' : 'Update';
     if (r.error){ toast(r.error, 'error'); return; }
     dirty = false;
     $('#dirty-dot').outerHTML = '<span id="dirty-dot" class="dot-saved">saved</span>';
     toast('Saved "'+slugVal+'"');
-    if (isNew) navigate(type==='blog'?'posts':'projects', {edit:slugVal});
+    if (isNew) navigate('items', { collection, edit: slugVal });
   };
 }
 
@@ -1107,8 +1297,13 @@ const BLOCK_DEFS = {
   marquee:   { label:'Marquee',   icon:'≫',  default:()=>({type:'marquee',text:'Scrolling text — ',speed:'normal',reverse:false,icon:'★'}) },
   palette:   { label:'Palette',   icon:'◧',  default:()=>({type:'palette',label:'Theme colors',colors:[{name:'Primary',hex:'#6366f1'},{name:'Accent',hex:'#10b981'}]}) },
   'iframe-sandbox': { label:'Sandbox', icon:'⛶', default:()=>({type:'iframe-sandbox',html:'<h1>Hello</h1>',css:'body{font-family:sans-serif;padding:24px}',js:'',height:300}) },
-  'recent-posts':      { label:'Recent posts',      icon:'📰', default:()=>({type:'recent-posts',title:'Recent posts',limit:3,showAllLink:true}) },
-  'featured-projects': { label:'Featured projects', icon:'⭐', default:()=>({type:'featured-projects',title:'Featured projects',limit:3,featuredOnly:true,showAllLink:true}) },
+  'collection-list': {
+    label:'Collection list', icon:'⛁',
+    default: () => {
+      const first = (COLLECTIONS_CACHE[0]?.name) || '';
+      return { type:'collection-list', collection:first, title:'', limit:3, featuredOnly:false, showAllLink:true };
+    },
+  },
 };
 
 async function renderPagesList(){
@@ -1327,8 +1522,17 @@ function renderBlockCard(b, i){
   else if (b.type==='marquee') preview = '<div style="overflow:hidden;background:var(--bg2);border-radius:6px;padding:6px 0;color:var(--text2);font-size:13px;white-space:nowrap">≫ '+esc(b.text||'').repeat(3)+'</div>';
   else if (b.type==='palette') preview = '<div style="display:flex;gap:4px;flex-wrap:wrap">'+(b.colors||[]).map(c=>'<div style="width:48px"><div style="height:32px;background:'+esc(c.hex||'#000')+';border-radius:4px"></div><div style="font-size:10px;color:var(--text3);margin-top:2px;text-align:center;font-family:monospace">'+esc(c.hex||'')+'</div></div>').join('')+'</div>';
   else if (b.type==='iframe-sandbox') preview = '<div style="font-family:monospace;font-size:11px;background:var(--bg2);border-radius:6px;padding:8px;color:var(--text2)">⛶ HTML/CSS/JS sandbox · '+(b.height||300)+'px tall</div>';
-  else if (b.type==='recent-posts') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px"><div style="color:var(--text3);text-transform:uppercase;font-size:10px;margin-bottom:4px">📰 '+esc(b.title||'Recent posts')+'</div><div style="color:var(--text2)">Renders the latest '+(b.limit||3)+' published blog post(s) at build time.</div></div>';
-  else if (b.type==='featured-projects') preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px"><div style="color:var(--text3);text-transform:uppercase;font-size:10px;margin-bottom:4px">⭐ '+esc(b.title||'Featured projects')+'</div><div style="color:var(--text2)">Renders '+(b.limit||3)+' '+(b.featuredOnly!==false?'featured':'most recent')+' project(s) at build time.</div></div>';
+  else if (b.type==='collection-list'){
+    const name = b.collection || '(none)';
+    const valid = COLLECTIONS_CACHE.some(c => c.name === b.collection);
+    const def = collectionDef(b.collection);
+    const titleTxt = b.title || (def?.label || name);
+    const detail = !b.collection
+      ? '<span style="color:var(--warn)">Pick a collection in the inspector.</span>'
+      : (!valid ? '<span style="color:var(--warn)">Collection "'+esc(name)+'" is not defined.</span>'
+        : 'Renders '+(Number(b.limit)>0?b.limit:'all')+' '+(b.featuredOnly?'featured ':'')+esc(def?.label?.toLowerCase() || name)+' at build time.');
+    preview = '<div style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px"><div style="color:var(--text3);text-transform:uppercase;font-size:10px;margin-bottom:4px">⛁ '+esc(titleTxt)+' · /'+esc(name)+'</div><div style="color:var(--text2)">'+detail+'</div></div>';
+  }
 
   return \`<div class="block\${selectedBlock===i?' selected':''}" data-bi="\${i}">
     <div class="block-head">
@@ -1592,16 +1796,23 @@ function buildInspector(b){
     <div class="field"><label>CSS</label><textarea data-k="css" class="editor" rows="4">\${esc(b.css||'')}</textarea></div>
     <div class="field"><label>JS</label><textarea data-k="js" class="editor" rows="5">\${esc(b.js||'')}</textarea></div>\`;
 
-  if (b.type==='recent-posts') return \`
-    <div class="field"><label>Section title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
-    <div class="field"><label>How many posts</label><input type="number" min="1" max="20" data-k="limit" value="\${Number(b.limit)||3}" /></div>
-    <div class="toggle-row"><label>Show "All posts →" link</label><input type="checkbox" data-k="showAllLink" \${b.showAllLink!==false?'checked':''} /></div>\`;
-
-  if (b.type==='featured-projects') return \`
-    <div class="field"><label>Section title</label><input data-k="title" value="\${esc(b.title||'')}" /></div>
-    <div class="field"><label>How many projects</label><input type="number" min="1" max="20" data-k="limit" value="\${Number(b.limit)||3}" /></div>
-    <div class="toggle-row"><label>Featured only <span style="color:var(--text3);font-weight:normal">(off = most recent)</span></label><input type="checkbox" data-k="featuredOnly" \${b.featuredOnly!==false?'checked':''} /></div>
-    <div class="toggle-row"><label>Show "All projects →" link</label><input type="checkbox" data-k="showAllLink" \${b.showAllLink!==false?'checked':''} /></div>\`;
+  if (b.type==='collection-list'){
+    const opts = COLLECTIONS_CACHE.length
+      ? COLLECTIONS_CACHE.map(c => '<option value="'+esc(c.name)+'"'+(b.collection===c.name?' selected':'')+'>'+esc(c.label||c.name)+' (/'+esc(c.name)+')</option>').join('')
+      : '<option value="">No collections defined yet</option>';
+    return \`
+      <div class="field"><label>Collection</label>
+        <select data-k="collection">
+          <option value="" \${!b.collection?'selected':''}>— pick one —</option>
+          \${opts}
+        </select>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">Manage collections in the sidebar's <strong>Manage collections</strong> section.</p>
+      </div>
+      <div class="field"><label>Section title <span style="color:var(--text3);font-weight:normal">(empty = use collection label)</span></label><input data-k="title" value="\${esc(b.title||'')}" /></div>
+      <div class="field"><label>How many items <span style="color:var(--text3);font-weight:normal">(0 = show all)</span></label><input type="number" min="0" max="100" data-k="limit" value="\${Number(b.limit)||0}" /></div>
+      <div class="toggle-row"><label>Featured only <span style="color:var(--text3);font-weight:normal">(filter by item.featured)</span></label><input type="checkbox" data-k="featuredOnly" \${b.featuredOnly?'checked':''} /></div>
+      <div class="toggle-row"><label>Show "All →" link <span style="color:var(--text3);font-weight:normal">(only when limit > 0)</span></label><input type="checkbox" data-k="showAllLink" \${b.showAllLink!==false?'checked':''} /></div>\`;
+  }
 
   return '';
 }
@@ -1698,6 +1909,113 @@ function bindInspector(b, host){
       b[arr].splice(i, 1);
       pageMark(); renderInspector(); renderCanvas();
     }
+  });
+}
+
+// ─── Collections manager ───
+async function renderCollectionsList(){
+  setTopbar({
+    crumbs:'<strong style="color:var(--text)">Collections</strong> <span style="color:var(--text3)">— add, rename, delete data lists</span>',
+    actions:'<button class="btn btn-primary btn-sm" id="new-coll">+ New collection</button>',
+  });
+  setContent('<div class="loading">Loading…</div>', true);
+  const items = await API.collections();
+  const html = items.length ? \`
+    <p style="color:var(--text2);font-size:13px;margin-bottom:12px">Each collection is a data list. The <strong>Collection list</strong> page-builder block reads from one by name.</p>
+    <div class="card card-pad">
+      \${items.map(c => \`
+        <div class="list-item">
+          <div class="item-info">
+            <div class="item-title"><span style="margin-right:6px">\${esc(c.icon||'◫')}</span>\${esc(c.label||c.name)}</div>
+            <div class="item-desc">/\${esc(c.name)} · singular: \${esc(c.labelOne||c.name)}</div>
+            <div class="item-meta">
+              <span>\${c.total ?? 0} item\${c.total===1?'':'s'}</span>
+              \${c.drafts?'<span class="badge draft">'+c.drafts+' drafts</span>':''}
+              \${c.featured?'<span class="badge featured">'+c.featured+' featured</span>':''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost btn-sm" data-open="\${esc(c.name)}">Items</button>
+            <button class="btn btn-ghost btn-sm" data-edit="\${esc(c.name)}">Edit</button>
+            <button class="btn btn-danger btn-sm" data-del="\${esc(c.name)}">Delete</button>
+          </div>
+        </div>
+      \`).join('')}
+    </div>
+  \` : '<div class="empty"><div class="ico">⛁</div>No collections yet. Create one to start adding data.<br><br><button class="btn btn-primary btn-sm" id="empty-new">+ Create a collection</button></div>';
+  setContent(html, true);
+
+  const openEditor = (existing) => openCollectionDialog(existing);
+  $('#new-coll')?.addEventListener('click', () => openEditor(null));
+  $('#empty-new')?.addEventListener('click', () => openEditor(null));
+  $('#content').querySelectorAll('[data-open]').forEach(b => b.onclick = () => navigate('items', { collection: b.dataset.open }));
+  $('#content').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => {
+    const c = items.find(x => x.name === b.dataset.edit);
+    if (c) openEditor(c);
+  });
+  $('#content').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const name = b.dataset.del;
+    const c = items.find(x => x.name === name);
+    const total = c?.total || 0;
+    const wipeChoice = total > 0
+      ? '<div class="toggle-row"><label>Also delete '+total+' file(s) on disk in /content/'+esc(name)+'/</label><input type="checkbox" id="coll-wipe" /></div>'
+      : '';
+    modal({
+      title: 'Delete collection',
+      body: '<p>Remove the <strong>'+esc(name)+'</strong> collection definition?'+(total>0?' '+total+' item file(s) currently exist.':'')+'</p>'+wipeChoice,
+      okText: 'Delete', okStyle: 'btn-danger',
+      onOk: async (wrap) => {
+        const wipe = wrap.querySelector('#coll-wipe')?.checked || false;
+        const r = await API.collDelete(name, wipe);
+        if (r.error){ toast(r.error, 'error'); return false; }
+        toast('Deleted collection "'+name+'"');
+        await refreshCollectionsCache();
+        navigate('collections');
+      },
+    });
+  });
+}
+
+function openCollectionDialog(existing){
+  const isNew = !existing;
+  const e = existing || { name:'', label:'', labelOne:'', icon:'◫' };
+  const body = \`
+    <div class="field"><label>Name <span style="color:var(--text3);font-weight:normal">(URL slug, lowercase a-z 0-9 -)</span></label>
+      <input id="cd-name" value="\${esc(e.name)}" placeholder="e.g. recipes" />
+    </div>
+    <div class="field-row cols-2">
+      <div class="field"><label>Label <span style="color:var(--text3);font-weight:normal">(plural, sidebar)</span></label>
+        <input id="cd-label" value="\${esc(e.label)}" placeholder="Recipes" />
+      </div>
+      <div class="field"><label>Singular label <span style="color:var(--text3);font-weight:normal">(buttons)</span></label>
+        <input id="cd-one" value="\${esc(e.labelOne)}" placeholder="Recipe" />
+      </div>
+    </div>
+    <div class="field"><label>Icon <span style="color:var(--text3);font-weight:normal">(emoji or symbol)</span></label>
+      <input id="cd-icon" value="\${esc(e.icon||'◫')}" maxlength="4" style="width:80px" />
+    </div>
+    \${!isNew?'<p style="font-size:11px;color:var(--text3)">Renaming moves <code>/content/'+esc(e.name)+'/</code> to the new name. Update any <code>collection-list</code> blocks that reference the old name.</p>':'<p style="font-size:11px;color:var(--text3)">Files will live in <code>/content/&lt;name&gt;/*.md</code> and items render at <code>/&lt;name&gt;/&lt;slug&gt;</code>.</p>'}
+  \`;
+  modal({
+    title: isNew ? 'New collection' : 'Edit collection',
+    body,
+    okText: isNew ? 'Create' : 'Save',
+    onOk: async (wrap) => {
+      const g = id => wrap.querySelector('#'+id).value.trim();
+      const name = g('cd-name');
+      if (!isSlug(name)){ toast('Name must be lowercase letters, numbers, dashes.', 'error'); return false; }
+      const payload = {
+        name,
+        label: g('cd-label') || name,
+        labelOne: g('cd-one') || name,
+        icon: g('cd-icon') || '◫',
+      };
+      const r = isNew ? await API.collCreate(payload) : await API.collUpdate(existing.name, payload);
+      if (r.error){ toast(r.error, 'error'); return false; }
+      toast(isNew ? 'Created "'+name+'"' : 'Saved "'+name+'"');
+      await refreshCollectionsCache();
+      navigate('collections');
+    },
   });
 }
 
@@ -1856,12 +2174,12 @@ async function renderMedia(){
 // ─── Renderer dispatcher ───
 function render(){
   if (currentRoute === 'dashboard') return renderDashboard();
-  if (currentRoute === 'posts') {
-    return ('edit' in currentParams) ? renderMdEdit('blog', currentParams.edit || '') : renderMdList('blog');
+  if (currentRoute === 'items') {
+    const c = currentParams.collection;
+    if (!c){ navigate('collections'); return; }
+    return ('edit' in currentParams) ? renderMdEdit(c, currentParams.edit || '') : renderMdList(c);
   }
-  if (currentRoute === 'projects') {
-    return ('edit' in currentParams) ? renderMdEdit('projects', currentParams.edit || '') : renderMdList('projects');
-  }
+  if (currentRoute === 'collections') return renderCollectionsList();
   if (currentRoute === 'pages') {
     return ('edit' in currentParams) ? renderPageEdit(currentParams.edit || '') : renderPagesList();
   }
@@ -1881,10 +2199,12 @@ function parseHash(){
   return [route,{}];
 }
 
+const KNOWN_ROUTES = new Set(['dashboard','items','collections','pages','site','media']);
+
 async function boot(){
   await refreshMenu();
   const [r, p] = parseHash();
-  navigate(r in ROUTES ? r : 'dashboard', p);
+  navigate(KNOWN_ROUTES.has(r) ? r : 'dashboard', p);
 }
 window.addEventListener('hashchange', () => { const [r,p] = parseHash(); if (r !== currentRoute || JSON.stringify(p) !== JSON.stringify(currentParams)) navigate(r,p); });
 window.addEventListener('beforeunload', e => { if (pageDirty) { e.preventDefault(); return ''; } });

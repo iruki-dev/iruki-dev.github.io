@@ -1,30 +1,25 @@
 import { defineCollection, z } from 'astro:content';
+import collectionsJson from '../config/collections.json';
 
-const blog = defineCollection({
-  type: 'content',
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    pubDate: z.coerce.date(),
-    updatedDate: z.coerce.date().optional(),
-    tags: z.array(z.string()).default([]),
-    draft: z.boolean().default(false),
-  }),
+const itemSchema = z.object({
+  title: z.string(),
+  description: z.string().default(''),
+  pubDate: z.coerce.date(),
+  updatedDate: z.coerce.date().optional(),
+  tags: z.array(z.string()).default([]),
+  draft: z.boolean().default(false),
+  featured: z.boolean().default(false),
+  github: z.string().url().optional(),
+  demo: z.string().url().optional(),
 });
 
-const projects = defineCollection({
-  type: 'content',
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    pubDate: z.coerce.date(),
-    tags: z.array(z.string()).default([]),
-    github: z.string().url().optional(),
-    demo: z.string().url().optional(),
-    featured: z.boolean().default(false),
-    draft: z.boolean().default(false),
-  }),
-});
+const dynamicCollections: Record<string, ReturnType<typeof defineCollection>> = {};
+for (const c of (collectionsJson as { collections: { name: string }[] }).collections) {
+  dynamicCollections[c.name] = defineCollection({
+    type: 'content',
+    schema: itemSchema,
+  });
+}
 
 const blockSchema = z.discriminatedUnion('type', [
   z.object({
@@ -225,16 +220,11 @@ const blockSchema = z.discriminatedUnion('type', [
     height: z.number().int().min(100).max(2000).default(300),
   }),
   z.object({
-    type: z.literal('recent-posts'),
-    title: z.string().default('Recent posts'),
+    type: z.literal('collection-list'),
+    collection: z.string().default(''),
+    title: z.string().default(''),
     limit: z.number().int().min(0).max(100).default(3), // 0 = show all
-    showAllLink: z.boolean().default(true),
-  }),
-  z.object({
-    type: z.literal('featured-projects'),
-    title: z.string().default('Featured projects'),
-    limit: z.number().int().min(0).max(100).default(3), // 0 = show all
-    featuredOnly: z.boolean().default(true),
+    featuredOnly: z.boolean().default(false),
     showAllLink: z.boolean().default(true),
   }),
 ]);
@@ -254,4 +244,4 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { blog, projects, pages };
+export const collections = { ...dynamicCollections, pages };

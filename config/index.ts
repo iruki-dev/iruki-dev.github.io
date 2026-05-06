@@ -1,4 +1,5 @@
 import siteJson from './site.json';
+import collectionsJson from './collections.json';
 
 export const PALETTES = [
   'indigo', 'rose', 'emerald', 'amber', 'sky', 'violet', 'crimson', 'lime',
@@ -21,3 +22,13 @@ export const SITE = siteJson as {
     konami?: boolean;
   };
 };
+
+export type CollectionDef = {
+  name: string;
+  label: string;
+  labelOne: string;
+  icon?: string;
+};
+
+export const COLLECTIONS = (collectionsJson as { collections: CollectionDef[] }).collections;
+export const COLLECTION_NAMES = COLLECTIONS.map((c) => c.name);

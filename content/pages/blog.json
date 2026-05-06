@@ -12,8 +12,9 @@
       "text": "Blog"
     },
     {
-      "type": "recent-posts",
-      "title": "All posts!!",
+      "type": "collection-list",
+      "collection": "blog",
+      "title": "All posts",
       "limit": 0,
       "showAllLink": false
     }

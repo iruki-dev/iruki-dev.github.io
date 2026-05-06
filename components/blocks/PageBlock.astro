@@ -18,8 +18,7 @@ import RunnerBlock from './RunnerBlock.astro';
 import MarqueeBlock from './MarqueeBlock.astro';
 import PaletteShowcaseBlock from './PaletteShowcaseBlock.astro';
 import IframeSandboxBlock from './IframeSandboxBlock.astro';
-import RecentPostsBlock from './RecentPostsBlock.astro';
-import FeaturedProjectsBlock from './FeaturedProjectsBlock.astro';
+import CollectionListBlock from './CollectionListBlock.astro';
 
 interface Props {
   block: any;
@@ -160,5 +159,4 @@ const buttonClass = (s?: string) =>
 {block.type === 'marquee'  && <MarqueeBlock  block={block} />}
 {block.type === 'palette'  && <PaletteShowcaseBlock block={block} />}
 {block.type === 'iframe-sandbox' && <IframeSandboxBlock block={block} />}
-{block.type === 'recent-posts'      && <RecentPostsBlock block={block} />}
-{block.type === 'featured-projects' && <FeaturedProjectsBlock block={block} />}
+{block.type === 'collection-list' && <CollectionListBlock block={block} />}
