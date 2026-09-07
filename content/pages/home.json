@@ -19,6 +19,13 @@
     },
     {
       "type": "collection-list",
+      "collection": "newsletter",
+      "title": "Newsletter",
+      "limit": 3,
+      "showAllLink": true
+    },
+    {
+      "type": "collection-list",
       "collection": "blog",
       "title": "Posts",
       "limit": 3,

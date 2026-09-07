@@ -1,0 +1,23 @@
+{
+  "title": "Newsletter",
+  "description": "매일 아침 배달되는 시사·경제·테크 브리핑.",
+  "pubDate": "2026-09-07",
+  "draft": false,
+  "showInNav": true,
+  "navLabel": "Newsletter",
+  "navOrder": 1,
+  "blocks": [
+    { "type": "heading", "level": 1, "text": "Newsletter" },
+    {
+      "type": "paragraph",
+      "text": "매일 아침, 하루를 시작하는 데 필요한 만큼만. 시사·경제·테크에서 오늘 꼭 알아야 할 이야기를 골라 5분 분량으로 정리합니다."
+    },
+    {
+      "type": "collection-list",
+      "collection": "newsletter",
+      "title": "지난 레터",
+      "limit": 0,
+      "showAllLink": false
+    }
+  ]
+}
