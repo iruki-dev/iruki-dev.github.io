@@ -1,6 +1,12 @@
 {
   "collections": [
     {
+      "name": "newsletter",
+      "label": "Newsletter",
+      "labelOne": "Issue",
+      "icon": "✉"
+    },
+    {
       "name": "blog",
       "label": "Blog",
       "labelOne": "Post",
