@@ -1,13 +1,21 @@
 {
   "title": "Projects",
-  "description": "Things I've built.",
+  "description": "만든 것들.",
   "pubDate": "2026-05-04",
   "draft": false,
   "showInNav": true,
   "navLabel": "Projects",
   "navOrder": 2,
   "blocks": [
-    { "type": "heading", "level": 1, "text": "Projects" },
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "Projects"
+    },
+    {
+      "type": "paragraph",
+      "text": "만들고 계속 손보고 있는 것들입니다. 각 항목에 무엇을 하는 프로젝트인지, 어떤 문제를 풀었는지 정리해 뒀습니다. 소스는 [GitHub](https://github.com/iruki-dev)에 있습니다."
+    },
     {
       "type": "collection-list",
       "collection": "projects",

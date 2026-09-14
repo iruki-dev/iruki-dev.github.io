@@ -1,20 +1,37 @@
 ---
 title: "iruki.dev"
-description: "This site. Personal website built with Astro, Tailwind CSS, and deployed via GitHub Actions."
+description: "이 사이트. 블록 기반 페이지 빌더와 로컬 비주얼 에디터가 함께 있어서 마크다운·JSON을 직접 만지지 않고도 편집됩니다."
 pubDate: 2026-05-04
 tags: ["Astro", "TypeScript", "Tailwind"]
 github: "https://github.com/iruki-dev/iruki-dev.github.io"
 featured: true
 ---
 
-## Stack
+개인 사이트는 고치기 쉬워야 유지됩니다. 그래서 구분을 하나만 뒀습니다 — `content/pages/`는
+사이트 그 자체, `content/<collection>/`은 블로그·프로젝트·뉴스레터 같은 데이터 리스트입니다.
 
-- **Astro** — static site generator with content collections
-- **Tailwind CSS** — styling with dark mode support
-- **MDX** — markdown with component support
-- **GitHub Actions** — automated build and deploy to GitHub Pages
+하드코딩된 `.astro` 페이지는 없습니다. `pages/` 디렉터리에는 라우트 디스패처 세 개만 있고,
+페이지를 추가하는 건 JSON 파일 하나를 넣는 일입니다. 레시피나 책 목록처럼 새로운 종류의
+리스트를 만드는 것도 설정 한 줄입니다.
 
-## Adding content
+## 블록 기반 페이지
 
-New blog posts go in `src/content/blog/`, new projects in `src/content/projects/`.
-Frontmatter schema is defined in `src/content/config.ts`.
+모든 페이지는 블록의 목록입니다. 제목과 문단은 물론 콜아웃, 갤러리, 탭, 타임라인, 스크롤에
+반응하는 카운터, Mermaid 다이어그램, KaTeX 수식, 샌드박스된 HTML·JS 플레이그라운드까지
+있습니다. 그중 `collection-list` 블록 하나가 모든 데이터 리스트의 표시를 담당합니다 — 홈에서는
+3개 미리보기로, 인덱스 페이지에서는 제한 없이 전체 목록으로.
+
+## 파일을 열지 않고 편집하기
+
+저장소에 로컬 admin 도구가 함께 들어 있습니다. Node 표준 라이브러리만 쓰는 단일 파일이고,
+외부 의존성도 인증도 네트워크 호출도 없습니다. 프로젝트 파일을 직접 읽고 쓰므로 저장하면
+dev 서버에 즉시 반영되고, 그 변경을 커밋하면 그게 곧 콘텐츠 이력입니다.
+
+항목 CRUD와 라이브 프리뷰가 붙은 마크다운 에디터, 페이지용 비주얼 블록 빌더, 컬렉션 관리,
+사이트 설정, 이미지 업로드까지 다룹니다. 사이트가 표현할 수 있는 건 전부 에디터를 열지 않고
+닿을 수 있습니다.
+
+## 스택
+
+Astro 컬렉션 + zod 스키마, CSS 변수로 전환하는 8종 색상 팔레트를 둔 Tailwind, 방문자별로
+기억되는 라이트·다크 테마, `main`에 푸시하면 GitHub Actions가 GitHub Pages로 배포합니다.
