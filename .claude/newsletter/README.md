@@ -26,8 +26,12 @@
 2. 워크플로가 **제목 규약 + 작성자가 저장소 소유자인지**를 확인합니다. 공개 저장소라 작성자 검증이 필수입니다
 3. `newsletter_publish.py`가 검증합니다 — frontmatter 필수 항목, `pubDate`와 제목 날짜 일치, 본문 11,000자 하한, 같은 날짜 파일 존재 여부
 4. `npm run build`로 실제 빌드가 되는지 확인합니다
-5. 통과하면 커밋·푸시하고, 이슈에 발행 링크를 댓글로 남기고 닫습니다
-6. 실패하면 사유와 로그 링크를 댓글로 남기고 **이슈를 열어 둡니다.** 본문을 고쳐 저장하면(`edited`) 다시 시도합니다
+5. 통과하면 커밋·푸시합니다
+6. **`deploy.yml`을 명시적으로 깨웁니다** (`gh workflow run deploy.yml`). 기본 `GITHUB_TOKEN`으로 만든 push는 다른 워크플로를 저절로 트리거하지 않는 GitHub Actions의 표준 제약이 있어서, 이 단계가 없으면 콘텐츠는 main에 들어가도 사이트에는 반영되지 않습니다
+7. 이슈에 발행 링크를 댓글로 남기고 닫습니다. 배포는 비동기라 링크가 실제로 뜨기까지 몇 분 걸립니다
+8. 실패하면 사유와 로그 링크를 댓글로 남기고 **이슈를 열어 둡니다.** 본문을 고쳐 저장하면(`edited`) 다시 시도합니다
+
+> 각 단계가 잘 돌았는지는 [Actions 탭](https://github.com/iruki-dev/iruki-dev.github.io/actions)에서 "Publish newsletter from issue"와 "Deploy to GitHub Pages" 둘 다 확인하세요. 전자만 초록불이고 후자가 그 뒤로 안 돌았다면 배포 트리거가 실패한 것입니다.
 
 ## 루틴 등록
 
