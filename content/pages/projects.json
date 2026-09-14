@@ -9,6 +9,10 @@
   "blocks": [
     { "type": "heading", "level": 1, "text": "Projects" },
     {
+      "type": "paragraph",
+      "text": "Things I've built and kept working on. Each one has a page explaining what it does, the problem it solves, and the decisions that turned out to matter. Source is on [GitHub](https://github.com/iruki-dev)."
+    },
+    {
       "type": "collection-list",
       "collection": "projects",
       "title": "All projects",
