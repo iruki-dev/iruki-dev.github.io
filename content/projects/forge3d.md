@@ -1,6 +1,6 @@
 ---
 title: "forge3d"
-description: "A 3D physics and game engine written from scratch in Python. Dynamics, collision, and contact are all solved by its own code — no MuJoCo, no PyBullet, no Bullet."
+description: "파이썬으로 처음부터 만든 3D 물리 게임 엔진. 동역학·충돌·접촉을 외부 엔진 없이 직접 풉니다."
 pubDate: 2026-06-03
 updatedDate: 2026-06-15
 tags: ["Python", "NumPy", "JAX", "Rust", "OpenGL"]
@@ -9,74 +9,29 @@ demo: "https://iruki.dev/forge3d"
 featured: true
 ---
 
-## The constraint is the project
+파이썬으로 쓴 3D 물리·게임 엔진입니다. MuJoCo나 PyBullet 같은 외부 물리엔진을 코어에서
+쓰지 않는다는 제약이 출발점이었습니다. 강체 적분, 충돌 판정, 접촉 임펄스를 전부 직접
+구현했고, 외부 엔진은 같은 장면을 돌려 수치를 대조하는 검증용으로만 씁니다.
 
-forge3d is a 3D physics and game engine written in Python. The interesting part isn't that it
-simulates rigid bodies — plenty of libraries do that. It's that **nothing else is allowed to do the
-simulating**. No MuJoCo, no PyBullet, no Bullet, no ODE. Every integration step, every collision
-test, every contact impulse is solved by code in this repository.
+남의 솔버를 감싸기만 하면 접촉이 왜 떨리는지, 에너지가 왜 조용히 새는지는 끝까지 모르게
+됩니다. 직접 풀면 둘 다 알게 됩니다.
 
-That rule exists because wrapping someone else's solver teaches you nothing about why contacts
-jitter or why energy quietly leaks out of a simulation. Writing the solver teaches you both.
+## 들어 있는 것
 
-External engines appear in exactly one place: a `validation/` directory that runs the same scenario
-through PyBullet and diffs the numbers. They are the grader, never the engine.
+- **물리** — 강체 동역학(RNEA/CRBA/ABA), SAT·GJK/EPA 충돌, PGS 접촉 솔버, 마찰
+- **구속** — 힌지·볼·프리즈매틱·고정·거리·스프링 조인트, heightfield 지형
+- **렌더링** — 실시간 OpenGL PBR, 디퍼드 렌더러, 소프트웨어 레이트레이서
+- **게임 레이어** — ECS, 스켈레탈 애니메이션, 오디오, 파티클, 씬 관리, 에디터
+- **학습** — Gymnasium 환경, JAX 배치 롤아웃, PPO·SHAC
 
-## What's in it
+공개 API는 `World` · `Body` · `Joint` · `Shape` · `Viewer` · `Recorder` 여섯 개면
+충분하도록 작게 유지했습니다. 물리 코어는 렌더러를 아예 import하지 않고 `SceneSnapshot`이라는
+순수 데이터로만 이어져서, 같은 시뮬레이션 코드가 실시간 미리보기도 레이트레이싱 영상도
+그대로 만들어냅니다.
 
-| Layer | What it does |
-|---|---|
-| Dynamics | Rigid-body dynamics via RNEA / CRBA / ABA, semi-implicit Euler integration |
-| Collision | 15-axis SAT for box-box, spheres, capsules, GJK/EPA for convex meshes, AABB broad-phase, BVH |
-| Contact | Impulse-based projected Gauss-Seidel solver, Coulomb friction, Baumgarte stabilization |
-| Joints | Hinge, ball, prismatic, fixed, distance, spring, plus kinematic weld/release |
-| Terrain | Heightfield collision and rendering, 32x32 up to 512x512 |
-| Rendering | Real-time OpenGL PBR, a deferred renderer with SSAO and shadow maps, and a software ray-tracer |
-| Game layer | Entity-component world, skeletal animation with blend trees, audio, particles, scenes, an editor |
-| Learning | Gymnasium-compatible environments, JAX batched rollouts, PPO and SHAC training runs |
+## 현재
 
-The public API stays deliberately small. Six concepts — `World`, `Body`, `Joint`, `Shape`,
-`Viewer`, `Recorder` — are enough to drop a box on the ground in about a dozen lines, and that
-15-line entry example is treated as a test: if it stops working without touching engine internals,
-the abstraction has failed.
-
-## Physics never sees the renderer
-
-The physics core doesn't import the rendering layer at all. The only thing that crosses between
-them is a `SceneSnapshot` — a plain data structure describing where everything is this frame.
-
-That single contract is why the same simulation code can drive a 60 FPS OpenGL preview or a
-1080p ray-traced video file with nothing changed but which renderer consumes the snapshot.
-
-## Proving it, not claiming it
-
-Physics code fails quietly. A simulation that looks plausible can still be wrong, so the project
-leans on checks that don't care how things look:
-
-| Check | Result |
-|---|---|
-| Acceleration vs. PyBullet, 50 body pairs | max absolute difference below 2e-11 |
-| Energy conservation, torque-free and undamped | drift under 0.1% |
-| Pendulum period vs. the closed-form solution | error under 0.01% |
-| Restitution coefficient vs. theory | error under 1.5% |
-| NumPy backend vs. JAX backend | agreement to floating-point noise |
-
-The whole engine runs under two interchangeable backends — NumPy for clarity, JAX for speed — and
-both must produce the same numbers. Keeping that true forces the entire core to stay functional
-and free of in-place mutation, which turns out to be good for the NumPy path too.
-
-## Going fast without cheating
-
-Speed came from two places that don't touch the "solve it yourself" rule. JAX compiles the whole
-loop and vectorizes hundreds of environments at once, worth roughly a 2,000x throughput gain for
-reinforcement learning rollouts. The hottest inner loops — the contact solver, GJK/EPA, BVH
-traversal — also have a Rust implementation behind PyO3. Rust is an optimization, not a
-dependency: if the extension isn't built, everything falls back to Python and the full test suite
-still passes.
-
-## Where it stands
-
-Version 2.2.1, 545 automated tests, fully type-annotated, published on PyPI as `pyforge3d`.
-Thirty-five development phases are complete, each gated on its own verification criteria before
-the next one could start. Three sample applications ship with it, including a first-person
-battle-royale prototype built entirely on the public API.
+버전 2.2.1, 테스트 545개, PyPI에 `pyforge3d`로 배포 중입니다. 검증은 보기와 무관한 기준으로
+합니다 — PyBullet 대조, 에너지 보존, 단진자 주기 해석해 대조, 그리고 NumPy와 JAX 백엔드가
+같은 수를 내는지. 속도는 JAX JIT+vmap과 핫루프의 Rust 구현에서 얻었고, Rust는 의존성이
+아니라 최적화라서 없어도 전체 테스트가 통과합니다.

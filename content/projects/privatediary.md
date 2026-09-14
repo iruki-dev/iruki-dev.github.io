@@ -1,92 +1,39 @@
 ---
 title: "PrivateDiary"
-description: "A zero-knowledge encrypted diary. The server never holds plaintext or a decryption key at any point — not during writing, not during recovery, not ever."
+description: "제로 지식 암호화 일기장. 서버는 어떤 시점에도 평문이나 복호화 키를 볼 수 없습니다."
 pubDate: 2026-09-11
 updatedDate: 2026-09-12
-tags: ["Next.js", "TypeScript", "Firebase", "Cryptography"]
+tags: ["Next.js", "TypeScript", "Firebase", "암호화"]
 github: "https://github.com/iruki-dev/PrivateDiary"
+demo: "https://privatediary.me"
 featured: true
 ---
 
-## The premise
+일기는 아무도 못 읽는다는 확신이 있어야 솔직하게 쓸 수 있습니다. 그래서 요구사항을 하나로
+잡았습니다 — **데이터베이스를 통째로 가져가도 서버는 일기를 읽을 수 없어야 한다.**
 
-A diary is only useful if you're willing to be honest in it, and you're only honest if nobody else
-can read it. So PrivateDiary starts from a hard requirement: **the server must never be able to
-read an entry**, even if someone walks away with the entire database.
+모든 암호화는 브라우저에서 끝납니다. Firebase에는 암호문만 저장되고, 유일하게 존재하는
+서버 코드(OTP 검증)는 시드도 개인키도 평문도 보지 않습니다.
 
-Everything is encrypted in the browser before it leaves. Firebase stores ciphertext. The one piece
-of server code that exists handles a login check and never sees a key, a seed, or a word of
-plaintext.
+## 주요 내용
 
-## How the keys work
+- **하이브리드 키** — 마스터 시드에서 X25519와 ML-KEM-768(양자내성 표준)을 결합한 키 쌍을
+  유도합니다. 오늘 쓴 글이 X25519가 깨지는 시점까지 남아 있을 수 있어서, 두 방식이 모두
+  뚫려야 열리게 했습니다.
+- **암호와 백업 코드** — Shamir 비밀 분산으로 만든 백업 코드를 암호와 완전히 동등한 자격으로
+  뒀습니다. 어느 쪽으로든 일기를 읽고, 암호를 재설정하고, 코드를 재발급할 수 있습니다.
+- **재발급이 실제로 무효화됩니다** — 코드는 시드를 직접 쪼개지 않고 무작위 래핑 키를 쪼갭니다.
+  시드를 직접 쪼개면 옛 코드가 영원히 같은 비밀을 복원해내서 재발급이 시늉에 그칩니다.
+- **OTP는 접근 게이트** — 6자리 회전 코드는 엔트로피가 낮아 키 재료가 될 수 없습니다. 금고
+  자체는 제로 지식으로 두고 그 위에 서버 검증 게이트만 얹었습니다.
+- **프라이빗 작성 모드** — 타이핑하는 동안 텍스트가 흐려져서 옆에서 볼 수 없습니다. CSS
+  블러라서 곁눈질을 막는 기능이고, 암호학적 보호는 암호화가 담당합니다.
 
-Every account has a master seed generated in the browser. From that seed, a hybrid key pair is
-derived deterministically — classical X25519 combined with ML-KEM-768, the post-quantum key
-encapsulation standard. Entries are encrypted with AES-GCM under a per-entry content key, and that
-content key is wrapped to the hybrid public key.
+암호와 백업 코드를 둘 다 잃으면 초기화(새 시드, 기존 일기 영구 소실)밖에 없습니다. 설계의
+빈틈이 아니라 제로 지식의 실제 비용이고, 화면에도 그렇게 적어뒀습니다.
 
-The hybrid part matters for a diary specifically. Encrypted data written today may still be sitting
-in a database when quantum computers can break X25519, so both mechanisms have to fail before
-anything opens — which means the post-quantum half can only help, never hurt.
+## 스택
 
-All of it lives in one directory with a single entry point, and that module imports no network code
-and no Firebase code at all. Any cryptography question has exactly one place to look.
-
-## Two keys to the same door
-
-The seed is wrapped by your passphrase. But a passphrase you never write down is a passphrase you
-will eventually forget, and "your diary is gone forever" is a bad answer.
-
-So there's a second, opt-in credential: **backup codes**, built on Shamir secret sharing. You get N
-codes, any K of which reconstruct access. The two credentials are deliberately equal in standing —
-with either one you can read your entries, reset the passphrase, or reissue the backup codes.
-Neither one reveals the other.
-
-The design detail that took the most thought is that **the codes don't split the seed directly**.
-They split a randomly generated AES wrapping key, and that key wraps the seed. The reason is
-revocation: if the codes split the seed itself, reissuing them would be theater — the old codes
-still reconstruct the same secret, forever. Splitting a wrapping key instead means reissuing
-replaces the wrapped seed in storage, and the old codes are left holding a key with nothing to
-open.
-
-Whether a reconstruction succeeded is decided by the AES-GCM authentication tag failing or passing,
-so no separate verification value is ever stored. A wrong passphrase and a wrong set of codes fail
-through the exact same mechanism.
-
-Lose both and there's only a reset — a brand new seed, with every old entry permanently unreadable.
-That's not a gap in the design; it's what zero-knowledge actually costs, and the interface says so
-plainly.
-
-## Authenticator codes, honestly labeled
-
-Optional TOTP is supported, and it is described as what it is: an **access gate, not an encryption
-factor**. A rotating six-digit code has nowhere near enough entropy to be key material, and
-demanding the original secret on every unlock would throw away everything convenient about an
-authenticator app. So the vault stays fully zero-knowledge and the code check sits on top of it,
-verified by a Cloud Function that stamps a short-lived claim — the same pattern other
-zero-knowledge services use, named accurately instead of marketed as extra encryption.
-
-One consequence needed handling. If the code gate blocked reading entries unconditionally, then
-losing your phone would also block the backup-code recovery path — the one path that has to survive
-losing things. Backup codes therefore clear the gate through a separate route, using a one-way proof
-derived from the reconstructed wrapping key. Only genuinely holding K codes produces that proof, so
-a stolen passphrase gains nothing from it.
-
-## Reading over your shoulder
-
-One small feature turned out to be the one worth having. Private writing mode blurs the text area
-while you type, so someone beside you on a train can't read along. Confirming your own text is
-hold-to-reveal rather than a toggle, and a second setting removes the reveal control entirely — at
-which point not even you can unblur it until you leave the page.
-
-It's a CSS blur over a `<textarea>`, and the docs say exactly that: it stops a glance, not a
-determined person with developer tools open. Encryption protects the content; this only protects the
-moment of writing it.
-
-## Stack
-
-Next.js with the App Router and React 19, TypeScript throughout, Firebase for authentication and
-storage, and audited primitives from the `@noble` family for the cryptography. Security headers are
-set at the edge with a per-request CSP nonce. Tests cover the crypto module directly and run the
-Firestore security rules against a local emulator, because a rule that looks right and a rule that
-is right are different things.
+Next.js(App Router) + React 19, TypeScript, Firebase 인증·저장, 암호화는 감사받은 `@noble`
+계열 구현. 테스트는 crypto 모듈 단위 테스트와 에뮬레이터 기반 Firestore 보안 규칙 테스트로
+나눠 돌립니다.

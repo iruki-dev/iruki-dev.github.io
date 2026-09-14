@@ -1,96 +1,57 @@
 ---
 title: "ClassTime"
-description: "An Android app that records your lectures on schedule. Register a timetable once and recordings start, stop, name, and file themselves by course."
+description: "시간표 기반 강의 자동 녹음 안드로이드 앱. 시간표를 한 번 등록하면 수업 시간에 맞춰 녹음이 시작되고, 파일 이름과 폴더가 과목별로 정리됩니다."
 pubDate: 2026-09-11
 tags: ["Kotlin", "Jetpack Compose", "Room", "Android"]
 github: "https://github.com/iruki-dev/ClassTime"
 featured: true
 ---
 
-## The chore it removes
+기본 녹음 앱으로 강의를 녹음하면 수업마다 버튼을 누르고, 나중에 `녹음_047.m4a` 뭉치를 보며
+어느 수업이었는지 추측하게 됩니다. 정리가 실제 작업이고, 그 작업은 항상 미뤄집니다.
 
-Recording lectures with a stock voice recorder means pressing start, pressing stop, and then later
-facing a folder of `recording_047.m4a` files with no idea which class each one was. The sorting is
-the actual work, and it always gets postponed.
+ClassTime은 시간표만 한 번 받고 나머지를 대신합니다.
 
-ClassTime takes a timetable once and does the rest:
-
-| Stock recorder | ClassTime |
+| 기본 녹음 앱 | ClassTime |
 |---|---|
-| Press start and stop for every class | Starts and stops on the schedule |
-| `recording_047.m4a` | `DataStructures_2026-03-04_0930.m4a` |
-| One folder, everything mixed together | A folder per course under `Music/ClassTime/` |
-| Rename and sort it all later | Nothing to sort |
+| 수업마다 시작·정지를 누름 | 시간표대로 알아서 시작·정지 |
+| `녹음_047.m4a` | `자료구조_2026-03-04_0930.m4a` |
+| 한 폴더에 전부 뒤섞임 | `Music/ClassTime/자료구조/` 처럼 과목별 폴더 |
+| 나중에 이름 바꾸고 분류 | 분류 작업 자체가 없음 |
 
-Because it writes into the shared `Music` folder, moving a semester onto a computer is a USB cable
-and a drag — no export step, no companion app.
+공용 `Music` 폴더에 저장하므로 PC로 옮길 때는 USB 케이블만 꽂으면 됩니다. 내보내기 단계도,
+전용 프로그램도 필요 없습니다.
 
-## The bug that shaped the whole app
+## 주요 기능
 
-The first working version recorded silence. Perfectly formed files of the right length, containing
-nothing.
+- **시간표** — 한 과목에 교시를 원하는 만큼 추가합니다. 요일마다 시간이 달라도, 같은 요일에
+  두 번 열려도 됩니다.
+- **학기 · 휴강 · 보강** — 개강·종강일 안에서만 녹음하고, 특정 날짜의 휴강을 건너뛰고,
+  시간표에 없는 보강을 한 번만 등록할 수 있습니다.
+- **수동 녹음 자동 라벨링** — 버튼을 누르면 현재 시각을 시간표(휴강·보강 반영)와 대조해
+  과목명을 알아서 붙입니다.
+- **파일 관리** — 앱 안에서 재생·이름 변경·삭제·공유. 과목 폴더 전체를 한 번에 보낼 수도
+  있습니다.
 
-The cause is an Android rule that isn't obvious until it bites you: microphone access is decided at
-**the instant a service calls `startForeground()`**, based on whether the app was visible right
-then. Grab it while visible and it holds — you can close the app, lock the screen, and recording
-continues to the end. Fail to grab it and `MediaRecorder` raises no error at all. It cheerfully
-encodes silence.
+## 가장 까다로웠던 문제
 
-A class-time alarm fires in the background by definition. So any design where the alarm launches the
-recording service is guaranteed to produce silent files, every single time.
+처음 만든 버전은 **무음을 녹음했습니다.** 길이도 형식도 정상인 파일에 소리만 없었습니다.
 
-**Standby mode** is the fix. When you open the app, the recording service is promoted to the
-foreground right then, while the app is on screen, and it claims the microphone before there's
-anything to record. When class starts, the service that already holds permission simply begins
-writing. Nothing new is launched, so nothing is re-evaluated.
+안드로이드는 서비스가 `startForeground()`를 부르는 **그 순간** 앱이 화면에 있었는지로 마이크
+권한을 고정합니다. 한 번 잡으면 앱을 닫아도 유지되지만, 못 잡으면 `MediaRecorder`가 예외 없이
+무음을 그대로 인코딩합니다. 수업 알람은 당연히 백그라운드에서 울리니, 알람이 서비스를 새로
+띄우는 구조로는 자동 녹음이 영원히 무음입니다.
 
-That leads to a rule the code treats as inviolable: `startForeground()` is called **exactly once per
-service instance**. Calling it a second time re-evaluates app visibility and throws away the
-permission that was so carefully acquired — so notification updates go through `notify()` only.
+**대기 모드**가 해결책입니다. 앱을 열 때 — 화면에 있는 그때 — 녹음 서비스를 미리 포그라운드로
+올려 마이크 권한을 잡아 둡니다. 수업 시간에는 이미 권한을 쥔 서비스가 그대로 녹음을 시작합니다.
+그래서 `startForeground()`는 서비스 인스턴스당 정확히 한 번만 부릅니다. 두 번 부르면 그때의
+앱 상태로 재평가되어 애써 잡은 권한을 잃습니다.
 
-Belt and braces on top: if amplitude stays at zero for more than eight seconds, a warning
-notification fires and the recording is flagged red in the list. The app tells you it failed rather
-than handing you a silent file weeks later.
+그래도 혹시 모르니 진폭이 8초 이상 0이면 경고 알림을 띄우고 목록에 빨갛게 표시합니다. 몇 주
+뒤에 빈 파일을 발견하는 대신 그 자리에서 알려줍니다.
 
-## Making sure recordings actually stop
+## 스택
 
-A recording that never ends is worse than one that never starts — it fills the disk and ruins the
-file. So stopping is guaranteed three ways: the scheduled stop alarm as the primary path, a watchdog
-alarm that wakes the device even in deep sleep, and a hard four-hour ceiling as a last resort. Any
-one of them is enough.
-
-Finalizing — closing the file and updating the database — deliberately runs outside the service, in
-an app-scoped non-cancellable coroutine. If Android kills the service mid-recording, the cleanup
-still completes, so you never end up with a list entry stuck on "recording" and a file that won't
-play. Three separate points also run an idempotent repair pass over any leftover pending files.
-
-There's a subtler trap here too. Rescheduling alarms and catching up on a missed recording have to
-be separate operations. Merge them and a stop alarm immediately re-triggers the class it just
-ended — an infinite recording loop. That separation is pinned in place by regression tests.
-
-## Real semesters, not ideal ones
-
-A timetable alone doesn't survive contact with an actual term, so the schedule model handles what
-actually happens:
-
-- **Term dates** — nothing records before the first day or after the last.
-- **Cancellations and holidays** — skip one course on one date, or the whole day, and the alarm moves
-  to the next valid meeting.
-- **Make-up classes** — one-off sessions at times not in the timetable, optionally linked to a course
-  so the file lands in the right folder.
-- **Irregular courses** — one course can have any number of meetings, each with its own day and
-  times, including two on the same day.
-
-Manual recordings get the same treatment: press the button and the app checks the current time
-against the timetable, cancellations and make-ups included, and labels the file with the right course
-automatically.
-
-## Stack and state
-
-Native Android in Kotlin with Jetpack Compose, Room for storage with tested schema migrations,
-exact alarms for scheduling, and MediaStore so files land in the public music folder. Recordings are
-96 kbps AAC — about 43 MB per lecture hour.
-
-Seventy-three unit and Robolectric tests cover alarm math, session matching, the database including
-migrations, and — most importantly — the silent-recording and re-recording bugs above, so neither can
-come back unnoticed.
+Kotlin + Jetpack Compose 네이티브 앱, Room(마이그레이션 테스트 포함), 정확 알람, MediaStore.
+96 kbps AAC로 저장해 강의 한 시간에 약 43 MB입니다. 테스트 73개가 알람 계산·세션 판정·DB
+마이그레이션과 위의 무음 녹음·재녹음 버그 회귀를 고정합니다.

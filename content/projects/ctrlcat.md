@@ -1,6 +1,6 @@
 ---
 title: "ctrlcat"
-description: "A collection of small web tools and browser games at ctrlcat.dev. No accounts, no tracking, no database — everything runs in your browser."
+description: "작은 웹 도구와 브라우저 게임 모음. 계정도, 추적도, 데이터베이스도 없이 전부 브라우저에서 돌아갑니다."
 pubDate: 2026-05-12
 updatedDate: 2026-05-13
 tags: ["Astro", "React", "TypeScript", "Tailwind"]
@@ -9,46 +9,42 @@ demo: "https://ctrlcat.dev"
 featured: true
 ---
 
-## What it is
+[ctrlcat.dev](https://ctrlcat.dev)는 두 부분으로 나뉩니다. 한 가지 일을 제대로 하는 **도구**와,
+1분 안에 끝나는 **브라우저 게임**입니다.
 
-[ctrlcat.dev](https://ctrlcat.dev) is a small site with two halves: utilities that do one job well,
-and browser games you can finish in a minute.
+만든 계기는 익숙한 경험입니다. JSON 포매터를 검색해서 들어가면 광고에 묻힌 페이지가 나오고,
+쿠키 배너를 닫고, 브라우저가 즉시 할 수 있는 일을 위해 데이터를 서버에 넘기게 됩니다. ctrlcat은 그 일을 브라우저에서 합니다. 계정도 분석 도구도 데이터베이스도 없고, 아무것도
+전송되지 않습니다.
 
-The category of site it's reacting to is familiar — you search for something like a JSON formatter,
-land on a page buried in ads, dismiss a cookie banner, and hand your data to a server for a job
-your browser could have done instantly. ctrlcat does the job in the browser. No accounts, no
-analytics, no database, nothing sent anywhere.
+## 들어 있는 것
 
-**Tools** currently include a JSON formatter, a Base64 encoder and decoder, a color converter for
-HEX, RGB and HSL, a password generator, and a word counter. **Games** include Snake, tic-tac-toe
-against an unbeatable opponent, and a number guesser that quietly teaches binary search.
+- **도구** — JSON 포매터, Base64 인코더/디코더, 색상 변환기(HEX·RGB·HSL), 비밀번호 생성기,
+  단어 수 세기
+- **게임** — 스네이크, 절대 지지 않는 상대와 하는 틱택토, 이진 탐색 감각을 익히게 되는 숫자
+  맞히기
 
-## Two sites in one repository
+## 한 저장소, 두 사이트
 
-Tools and games share a repository, a build, and a deployment — and nothing else. No shared
-components, no cross-links, no navigation between them. They have separate themes: a professional
-cyan for tools, a playful violet for games.
+도구와 게임은 저장소와 빌드와 배포를 공유하고, 그 외에는 아무것도 공유하지 않습니다. 공통
+컴포넌트도, 서로를 향한 링크도, 둘 사이를 오가는 내비게이션도 없습니다. 테마도 다릅니다 —
+도구는 차분한 시안, 게임은 보라색.
 
-That separation is enforced as a project rule rather than left to habit, because the alternative
-decays predictably. One shared header, then one shared card component, then a "you might also like"
-row, and the utility that was supposed to be calm and fast is now a portal. Someone formatting JSON
-at work should never be shown Snake.
+이 분리를 습관이 아니라 규칙으로 못 박아 둔 이유는 그러지 않으면 무너지는 방향이 뻔하기
+때문입니다. 공통 헤더 하나, 그다음 공통 카드, 그다음 "이런 것도 있어요" 줄이 붙고, 조용하고
+빨라야 했던 도구가 포털이 됩니다. 업무 중에 JSON을 다듬는 사람에게 스네이크를 보여줄 일은
+없습니다.
 
-## Adding something is adding a file
+## 추가하는 건 파일 하나
 
-Every tool and game is one markdown file of metadata plus one React component. The markdown holds
-the title, description, category, tags and translations; the component is the thing itself. The
-content collection schema validates it at build time, so a typo in a category is a failed build
-rather than a broken page.
+도구와 게임 하나하나는 메타데이터 마크다운 파일 하나 + React 컴포넌트 하나입니다. 컬렉션
+스키마가 빌드 시점에 검증하므로, 분류 이름에 오타가 나면 페이지가 깨지는 대신 빌드가 실패합니다.
 
-Each entry also carries genuine prose explaining what the thing is and why it exists — the Base64
-page explains why the encoding was invented, that it isn't encryption, and what the trailing `=`
-signs mean. Useful to read even if you only came to paste a string, and it earns the page a reason
-to exist beyond the widget.
+각 항목에는 그게 무엇이고 왜 존재하는지 설명하는 글도 함께 넣었습니다. Base64 페이지는 이
+인코딩이 왜 생겼는지, 암호화가 아니라는 점, 끝의 `=` 기호가 무엇인지 설명합니다. 문자열만
+붙여넣으러 온 사람에게도 읽을 만하고, 페이지에 위젯 말고도 존재할 이유를 줍니다.
 
-## Stack
+## 스택
 
-Astro 4 for static output with zero JavaScript by default, React islands only where a tool actually
-needs interactivity, Tailwind with custom design tokens per theme, and GitHub Actions deploying to
-GitHub Pages on every push to `main`. Fully static, which is what makes "no database" a structural
-fact rather than a promise.
+Astro 4로 정적 출력(기본 JS 0), 상호작용이 필요한 곳에만 React 아일랜드, 테마별 디자인 토큰을
+둔 Tailwind, `main`에 푸시하면 GitHub Actions가 GitHub Pages로 배포. 완전 정적이라 "데이터베이스
+없음"은 약속이 아니라 구조적 사실입니다.
