@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "content" / "newsletter"
 HISTORY = ROOT / "public" / "newsletter-history.json"
 HISTORY_DAYS = 14
-MIN_BODY_CHARS = 11000
+MIN_BODY_CHARS = 6000
 
 TITLE_RE = re.compile(r"^newsletter:\s*(\d{4}-\d{2}-\d{2})\s*$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -69,12 +69,36 @@ def drop_section(body, heading):
     return body[: m.start()] + (rest[nxt.start():] if nxt else "")
 
 
-def extract_items(body):
-    """`- **제목** — 내용` 형식 항목의 제목을 모읍니다.
+# 본문 항목이 아니라 요약·부록에 해당하는 섹션. 같은 불릿 형식을 쓰지만
+# "오늘 다룬 소재"가 아니므로 이력에서 제외합니다.
+NON_ITEM_SECTIONS = (
+    "한눈에",
+    "오늘의 헤드라인",
+    "오늘의 일정",
+    "오늘의 단어",
+    "오늘의 영어 표현",
+)
 
-    요약 섹션은 본문 항목을 되풀이할 뿐이라 이력에서 제외합니다.
-    """
-    for heading in ("한눈에", "오늘의 헤드라인"):
+
+def extract_words(body):
+    """오늘의 단어를 모읍니다. 새 형식은 불릿 여러 개, 예전 형식은 제목 뒤에 하나."""
+    heading = re.search(r"^##[^\S\n]*오늘의 단어[^\S\n]*(?:[—\-–][^\S\n]*(.+))?$", body, re.M)
+    if not heading:
+        return []
+    rest = body[heading.end():]
+    nxt = re.search(r"^##\s", rest, re.M)
+    section = rest[: nxt.start()] if nxt else rest
+    words = [m.group(1).strip()
+             for m in re.finditer(r"^\s*[-*]\s+\*\*(.+?)\*\*", section, re.M)]
+    if words:
+        return words
+    legacy = (heading.group(1) or "").strip()
+    return [legacy] if legacy else []
+
+
+def extract_items(body):
+    """`- **제목** — 내용` 형식 항목의 제목을 모읍니다."""
+    for heading in NON_ITEM_SECTIONS:
         body = drop_section(body, heading)
     seen, items = set(), []
     for m in re.finditer(r"^\s*[-*]\s+\*\*(.+?)\*\*", body, re.M):
@@ -83,12 +107,6 @@ def extract_items(body):
             seen.add(title)
             items.append(title)
     return items
-
-
-def extract_after_dash(body, heading):
-    """`## 오늘의 단어 — 통상임금` 같은 제목에서 뒷부분만 떼어냅니다."""
-    m = re.search(rf"^##\s*{re.escape(heading)}\s*[—\-–]\s*(.+)$", body, re.M)
-    return m.group(1).strip() if m else ""
 
 
 def extract_subheads(body, heading):
@@ -116,7 +134,7 @@ def build_history():
             "date": path.stem,
             "title": unquote(fm.get("title", "")),
             "items": extract_items(body),
-            "word": extract_after_dash(body, "오늘의 단어"),
+            "words": extract_words(body),
             "liberalArts": extract_subheads(body, "오늘의 교양"),
         })
     HISTORY.parent.mkdir(parents=True, exist_ok=True)
