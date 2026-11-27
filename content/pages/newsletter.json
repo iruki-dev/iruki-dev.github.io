@@ -4,14 +4,9 @@
   "pubDate": "2026-09-07",
   "draft": false,
   "showInNav": true,
-  "navLabel": "Newsletter",
+  "navLabel": "뉴스레터",
   "navOrder": 1,
   "blocks": [
-    {
-      "type": "heading",
-      "level": 1,
-      "text": "Newsletter"
-    },
     {
       "type": "paragraph",
       "text": "매일 아침, 어제 세상에서 벌어진 일 중 알아야 할 것만 골라 정리합니다. 중요한 순서대로 읽고, 뒤쪽에서 트렌드와 읽을거리까지."
@@ -19,7 +14,7 @@
     {
       "type": "collection-list",
       "collection": "newsletter",
-      "title": "지난 레터",
+      "title": "뉴스레터",
       "limit": 0,
       "showAllLink": false
     }

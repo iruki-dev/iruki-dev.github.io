@@ -6,11 +6,14 @@ export default {
     './components/**/*.{astro,ts}',
     './layouts/**/*.astro',
     './pages/**/*.astro',
-    './content/**/*.{md,mdx}',
+    './content/**/*.{md,mdx,json}',
   ],
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'sans-serif'],
+      },
       colors: {
         accent: {
           50: accent(50), 100: accent(100), 200: accent(200),
