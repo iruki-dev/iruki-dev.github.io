@@ -26,21 +26,17 @@ const titleText = block.title || (def?.label ?? 'Items');
 {!valid && (
   <section class="mb-10 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-800 dark:text-amber-200">
     Collection <code class="font-mono">{name || '(none)'}</code> is not defined.
-    Add it in the admin <strong>Collections</strong> section, or pick an existing one:
-    {COLLECTION_NAMES.length > 0 && (
-      <span> {COLLECTION_NAMES.map((n) => <code class="mx-1 font-mono">{n}</code>)}</span>
-    )}
   </section>
 )}
 
 {valid && items.length > 0 && (
-  <section class="mb-10">
-    <div class="flex items-baseline justify-between mb-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-        {titleText}
+  <section class="mb-14">
+    <div class="flex items-baseline justify-between pb-3 border-b-2 border-zinc-900 dark:border-zinc-100">
+      <h2 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+        {titleText} <span class="ml-1 text-base font-normal text-zinc-400">{all.length}</span>
       </h2>
       {block.showAllLink !== false && limit > 0 && limit < all.length && (
-        <a href={`/${name}`} class="text-sm link">All {def?.label?.toLowerCase() || name} →</a>
+        <a href={`/${name}`} class="text-[15px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">전체 보기</a>
       )}
     </div>
     <div>

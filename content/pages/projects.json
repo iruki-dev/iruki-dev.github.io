@@ -4,14 +4,9 @@
   "pubDate": "2026-05-04",
   "draft": false,
   "showInNav": true,
-  "navLabel": "Projects",
-  "navOrder": 2,
+  "navLabel": "프로젝트",
+  "navOrder": 3,
   "blocks": [
-    {
-      "type": "heading",
-      "level": 1,
-      "text": "Projects"
-    },
     {
       "type": "paragraph",
       "text": "직접 설계하고 구현한 프로젝트들입니다. 각 항목에 기술 스택과 규모, 해결한 기술적 과제, 결과를 정리했습니다. 소스는 [GitHub](https://github.com/iruki-dev)에 공개돼 있습니다."
@@ -19,7 +14,7 @@
     {
       "type": "collection-list",
       "collection": "projects",
-      "title": "All projects",
+      "title": "프로젝트",
       "limit": 0,
       "featuredOnly": false,
       "showAllLink": false

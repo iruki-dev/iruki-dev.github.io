@@ -7,35 +7,28 @@
   "navLabel": "Home",
   "blocks": [
     {
-      "type": "heading",
-      "level": 1,
-      "text": "Hey, I'm iruki",
-      "align": "left"
-    },
-    {
-      "type": "paragraph",
-      "text": "Developer. This is my personal corner of the internet — blog, projects, and whatever else I feel like putting here.",
-      "align": "left"
+      "type": "html",
+      "html": "<div class=\"mb-14 flex items-center gap-5\"><img src=\"/avatar.png\" alt=\"\" width=\"80\" height=\"80\" class=\"w-20 h-20 rounded-full border border-zinc-200 dark:border-zinc-700 shrink-0\"><div><p class=\"text-2xl font-bold text-zinc-900 dark:text-zinc-100\">iruki</p><p class=\"mt-1 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400\">만든 것과 공부한 것을 정리하고, 매일 아침 뉴스 브리핑을 올립니다.</p><p class=\"mt-2 flex gap-3 text-[15px] text-zinc-500\"><a class=\"underline underline-offset-2 hover:text-zinc-900\" href=\"https://github.com/iruki-dev\">GitHub</a><a class=\"underline underline-offset-2 hover:text-zinc-900\" href=\"mailto:me@iruki.dev\">me@iruki.dev</a></p></div></div>"
     },
     {
       "type": "collection-list",
       "collection": "newsletter",
-      "title": "Newsletter",
+      "title": "뉴스레터",
       "limit": 3,
       "showAllLink": true
     },
     {
       "type": "collection-list",
       "collection": "blog",
-      "title": "Posts",
+      "title": "글",
       "limit": 3,
       "showAllLink": true
     },
     {
       "type": "collection-list",
       "collection": "projects",
-      "title": "Projects",
-      "limit": 3,
+      "title": "프로젝트",
+      "limit": 5,
       "featuredOnly": true,
       "showAllLink": true
     }

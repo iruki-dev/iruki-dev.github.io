@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import { ymdLong } from '../components/date';
 
 interface Props {
   title: string;
@@ -11,54 +12,45 @@ interface Props {
   demo?: string;
   collection: string;
   collectionLabel: string;
+  prev?: { href: string; title: string };
+  next?: { href: string; title: string };
 }
 
 const {
   title, description, pubDate, updatedDate,
   tags = [], github, demo,
-  collection, collectionLabel,
+  collection, collectionLabel, prev, next,
 } = Astro.props;
-
-const pubDateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-const updatedDateStr = updatedDate?.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const showTags = collection !== 'newsletter' && tags.length > 0;
 ---
 
 <BaseLayout title={title} description={description}>
   <article>
-    <header class="mb-8 pb-8 border-b border-zinc-100 dark:border-zinc-800">
-      <div class="flex flex-wrap gap-1 mb-3">
-        {tags.map(tag => <span class="tag">{tag}</span>)}
+    <header class="mb-10">
+      <h1 class="text-[28px] sm:text-[32px] leading-tight font-bold text-zinc-900 dark:text-zinc-100">{title}</h1>
+      <div class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-zinc-500 dark:text-zinc-400">
+        <time datetime={pubDate.toISOString()}>{ymdLong(pubDate)}</time>
+        {updatedDate && <span>(수정 {ymdLong(updatedDate)})</span>}
+        {github && <><span aria-hidden="true">·</span><a href={github} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100">GitHub</a></>}
+        {demo && <><span aria-hidden="true">·</span><a href={demo} target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100">사이트</a></>}
       </div>
-      <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{title}</h1>
-      {description && (
-        <p class="mt-2 text-zinc-500 dark:text-zinc-400">{description}</p>
-      )}
-      <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400 dark:text-zinc-600">
-        <time datetime={pubDate.toISOString()}>Published {pubDateStr}</time>
-        {updatedDate && (
-          <span>· Updated <time datetime={updatedDate.toISOString()}>{updatedDateStr}</time></span>
-        )}
-        {(github || demo) && <span>·</span>}
-        {github && (
-          <a href={github} target="_blank" rel="noopener noreferrer" class="link">GitHub ↗</a>
-        )}
-        {demo && (
-          <a href={demo} target="_blank" rel="noopener noreferrer" class="link">Live demo ↗</a>
-        )}
-      </div>
+      {showTags && <p class="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">{tags.join(', ')}</p>}
     </header>
-    <div class="prose dark:prose-invert max-w-none
-                prose-headings:font-semibold
-                prose-a:text-accent-500 prose-a:no-underline hover:prose-a:underline
-                dark:prose-a:text-accent-400
+    <div class="prose prose-zinc dark:prose-invert max-w-none text-[17px] leading-[1.85]
+                prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-14 prose-h3:text-xl
+                prose-a:text-blue-700 dark:prose-a:text-blue-400 prose-a:underline-offset-2
+                prose-li:my-1.5
                 prose-code:before:content-none prose-code:after:content-none
-                prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800
+                prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:font-medium
                 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                prose-pre:bg-zinc-900 dark:prose-pre:bg-zinc-900">
+                prose-pre:bg-zinc-900 prose-code:break-all">
       <slot />
     </div>
   </article>
-  <div class="mt-12 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-    <a href={`/${collection}`} class="text-sm text-accent-500 dark:text-accent-400 hover:underline">← All {collectionLabel.toLowerCase()}</a>
-  </div>
+  {(prev || next) && (
+    <nav class="mt-16 grid grid-cols-2 gap-3 border-t border-zinc-200 dark:border-zinc-800 pt-6 text-[15px]">
+      <div>{prev && <a href={prev.href} class="block hover:underline underline-offset-4"><span class="block text-[13px] text-zinc-500">이전 글</span><span class="font-semibold text-zinc-900 dark:text-zinc-100">{prev.title}</span></a>}</div>
+      <div class="text-right">{next && <a href={next.href} class="block hover:underline underline-offset-4"><span class="block text-[13px] text-zinc-500">다음 글</span><span class="font-semibold text-zinc-900 dark:text-zinc-100">{next.title}</span></a>}</div>
+    </nav>
+  )}
 </BaseLayout>

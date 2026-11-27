@@ -3,12 +3,10 @@ import { SITE } from '../config';
 const year = new Date().getFullYear();
 ---
 
-<footer class="border-t border-zinc-200 dark:border-zinc-800 mt-auto">
-  <div class="container flex items-center justify-between h-12 text-sm text-zinc-400 dark:text-zinc-600">
-    <span>© {year} {SITE.title}</span>
-    <a href={SITE.github} target="_blank" rel="noopener noreferrer"
-      class="hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors">
-      GitHub
-    </a>
+<footer class="border-t border-zinc-200 dark:border-zinc-800 mt-16">
+  <div class="container py-8 text-sm text-zinc-500 dark:text-zinc-400 flex flex-wrap gap-x-4 gap-y-1">
+    <span>© {year} {SITE.author}</span>
+    <a href={SITE.github} target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-zinc-100">GitHub</a>
+    <a href={`mailto:${SITE.email}`} class="hover:text-zinc-900 dark:hover:text-zinc-100">{SITE.email}</a>
   </div>
 </footer>

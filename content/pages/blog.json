@@ -4,19 +4,15 @@
   "pubDate": "2026-05-04",
   "draft": false,
   "showInNav": true,
-  "navLabel": "Blog",
+  "navLabel": "글",
   "blocks": [
-    {
-      "type": "heading",
-      "level": 1,
-      "text": "Blog"
-    },
     {
       "type": "collection-list",
       "collection": "blog",
-      "title": "All posts",
+      "title": "글",
       "limit": 0,
       "showAllLink": false
     }
-  ]
+  ],
+  "navOrder": 2
 }

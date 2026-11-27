@@ -22,28 +22,27 @@ const navLinks = navPages
 const { pathname } = Astro.url;
 ---
 
-<header class="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm">
-  <div class="container flex items-center justify-between h-14">
-    <a href="/" class="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-accent-500 dark:hover:text-accent-400 transition-colors">
+<header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+  <div class="container flex items-center justify-between h-14 gap-3">
+    <a href="/" class="flex items-center gap-2 shrink-0 font-bold text-[17px] text-zinc-900 dark:text-zinc-100">
+      <img src="/avatar.png" alt="" width="24" height="24" class="w-6 h-6 rounded-full border border-zinc-200 dark:border-zinc-700" />
       {SITE.title}
     </a>
-    <nav class="flex items-center gap-1">
+    <nav class="flex items-center min-w-0">
       {navLinks.map(({ href, label }) => (
         <a
           href={href}
           class:list={[
-            'px-3 py-1.5 rounded-md text-sm transition-colors',
+            'px-2 sm:px-3 py-1.5 text-[15px] whitespace-nowrap',
             (href === '/' ? pathname === '/' : pathname.startsWith(href))
-              ? 'text-accent-500 dark:text-accent-400 font-medium'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+              ? 'text-zinc-900 dark:text-zinc-100 font-semibold'
+              : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100',
           ]}
         >
           {label}
         </a>
       ))}
-      <div class="ml-1 border-l border-zinc-200 dark:border-zinc-800 pl-2">
-        <ThemeToggle />
-      </div>
+      <ThemeToggle />
     </nav>
   </div>
 </header>

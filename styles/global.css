@@ -70,7 +70,7 @@
   .container { @apply mx-auto max-w-3xl px-4; }
 
   .link {
-    @apply text-accent-500 hover:text-accent-600 dark:text-accent-400 dark:hover:text-accent-300 underline-offset-4 hover:underline transition-colors;
+    @apply text-zinc-900 dark:text-zinc-100 underline underline-offset-4 decoration-zinc-400 hover:decoration-zinc-900;
   }
 
   .tag {
@@ -83,7 +83,7 @@
 /* Reading progress bar */
 .reading-progress {
   position: fixed; top: 0; left: 0; height: 2px; width: 0;
-  background: rgb(var(--accent-500));
+  background: rgb(24 24 27);
   z-index: 60; transition: width 80ms linear;
 }
 
@@ -91,15 +91,15 @@
 .back-to-top {
   position: fixed; right: 1rem; bottom: 1rem; z-index: 50;
   display: flex; align-items: center; justify-content: center;
-  width: 2.5rem; height: 2.5rem; border-radius: 9999px;
-  background: rgb(var(--accent-500)); color: white;
-  box-shadow: 0 6px 16px -6px rgb(0 0 0 / .35);
+  width: 2.5rem; height: 2.5rem; border-radius: 4px;
+  background: rgb(24 24 27); color: white;
+  box-shadow: none;
   opacity: 0; pointer-events: none;
   transform: translateY(8px);
   transition: opacity 200ms, transform 200ms;
 }
 .back-to-top.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
-.back-to-top:hover { background: rgb(var(--accent-600)); }
+.back-to-top:hover { opacity: .85; }
 
 /* Block: marquee */
 @keyframes marquee-scroll {

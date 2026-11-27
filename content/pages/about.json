@@ -4,22 +4,26 @@
   "pubDate": "2026-05-04",
   "draft": false,
   "showInNav": true,
-  "navLabel": "About",
-  "navOrder": 3,
+  "navLabel": "소개",
+  "navOrder": 4,
   "blocks": [
-    { "type": "heading", "level": 1, "text": "About" },
     {
-      "type": "paragraph",
-      "text": "Hi, I'm iruki. Developer and builder of things."
+      "type": "heading",
+      "level": 1,
+      "text": "소개"
     },
     {
       "type": "paragraph",
-      "text": "This site is my personal space on the internet. I write about things I'm learning, projects I'm working on, and whatever else I find interesting."
+      "text": "iruki입니다. 안드로이드 앱, 웹, 파이썬으로 필요한 것을 만들어 씁니다. 만든 것은 [프로젝트](/projects)에, 매일 아침 뉴스 정리는 [뉴스레터](/newsletter)에 올립니다."
     },
-    { "type": "heading", "level": 2, "text": "Contact" },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "연락처"
+    },
     {
       "type": "paragraph",
-      "text": "Email: [me@iruki.dev](mailto:me@iruki.dev)\n\nGitHub: [iruki-dev](https://github.com/iruki-dev)"
+      "text": "메일: [me@iruki.dev](mailto:me@iruki.dev)\n\nGitHub: [iruki-dev](https://github.com/iruki-dev)"
     }
   ]
 }

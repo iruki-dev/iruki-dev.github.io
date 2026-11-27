@@ -2,19 +2,19 @@
   "collections": [
     {
       "name": "newsletter",
-      "label": "Newsletter",
+      "label": "뉴스레터",
       "labelOne": "Issue",
       "icon": "✉"
     },
     {
       "name": "blog",
-      "label": "Blog",
+      "label": "글",
       "labelOne": "Post",
       "icon": "✎"
     },
     {
       "name": "projects",
-      "label": "Projects",
+      "label": "프로젝트",
       "labelOne": "Project",
       "icon": "◫"
     }

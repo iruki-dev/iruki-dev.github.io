@@ -26,12 +26,13 @@ const features = SITE.features ?? {};
 ---
 
 <!doctype html>
-<html lang="en" data-palette={palette}>
+<html lang="ko" data-palette={palette}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 
     <title>{siteTitle}</title>
     <meta name="description" content={description} />
@@ -55,7 +56,7 @@ const features = SITE.features ?? {};
       }
     </script>
   </head>
-  <body class="min-h-screen flex flex-col">
+  <body class="min-h-screen flex flex-col break-keep">
     {features.readingProgress && <ReadingProgress />}
     <Header />
     <main class="container flex-1 py-12">

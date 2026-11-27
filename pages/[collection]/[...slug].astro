@@ -6,18 +6,20 @@ import { COLLECTIONS } from '../../config';
 export async function getStaticPaths() {
   const paths: any[] = [];
   for (const def of COLLECTIONS) {
-    const items = await getCollection(def.name as any, ({ data }: any) => !data.draft);
-    for (const item of items) {
+    const items = (await getCollection(def.name as any, ({ data }: any) => !data.draft))
+      .sort((a: any, b: any) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf());
+    items.forEach((item: any, i: number) => {
+      const link = (it: any) => it && { href: `/${def.name}/${it.slug}`, title: it.data.title };
       paths.push({
-        params: { collection: def.name, slug: (item as any).slug },
-        props: { item, def },
+        params: { collection: def.name, slug: item.slug },
+        props: { item, def, prev: link(items[i - 1]), next: link(items[i + 1]) },
       });
-    }
+    });
   }
   return paths;
 }
 
-const { item, def } = Astro.props as { item: any; def: any };
+const { item, def, prev, next } = Astro.props as { item: any; def: any; prev?: any; next?: any };
 const { Content } = await item.render();
 ---
 
@@ -31,6 +33,8 @@ const { Content } = await item.render();
   demo={item.data.demo}
   collection={def.name}
   collectionLabel={def.label}
+  prev={prev}
+  next={next}
 >
   <Content />
 </CollectionPost>
